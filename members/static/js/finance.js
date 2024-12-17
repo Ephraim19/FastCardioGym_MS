@@ -35,6 +35,9 @@ document.addEventListener('DOMContentLoaded', function () {
     function fetchRevenueData(startDate, endDate) {
         const url = `/revenue-summary/?start_date=${startDate}&end_date=${endDate}`;
         
+        // Reset all cards before fetching new data
+        resetAllCards();
+        
         fetch(url)
             .then(response => {
                 if (!response.ok) {
@@ -45,15 +48,35 @@ document.addEventListener('DOMContentLoaded', function () {
             .then(data => {
                 console.log('Revenue Data:', data); // Log to check the returned data
 
+                // Ensure all subscription cards are reset first
+                Object.keys(subscriptionCards).forEach(key => {
+                    if (key !== 'totalRevenue') {
+                        updateSubscriptionCard(key, 0, 0);
+                    }
+                });
+
                 // Check if the necessary data exists
                 if (data && data.membership_types) {
                     // Update Total Revenue
-                    updateSubscriptionCard('totalRevenue', data.total_revenue, `+${data.total_revenue_growth}% from last month`);
+                    updateSubscriptionCard('totalRevenue', data.total_revenue,
+                         `${data.total_subscribers} subscriptions`);
                     
-                    // Update Subscription Types
+                    // Explicitly map and update each subscription type
+                    const subscriptionMap = {
+                        'monthly': 'monthlySubs',
+                        'quarterly': 'quarterlySubs',
+                        'yearly': 'yearlySubs',
+                        'student': 'studentSubs'
+                    };
+
+                    // Update Subscription Types with explicit mapping
                     data.membership_types.forEach(item => {
-                        const planKey = item.plan.toLowerCase() + 'Subs'; // Use 'monthlySubs', 'quarterlySubs', etc.
-                        updateSubscriptionCard(planKey, item.total_amount, item.count, 'Subscribers');
+                        const normalizedPlan = item.plan.toLowerCase();
+                        const cardKey = subscriptionMap[normalizedPlan];
+                        
+                        if (cardKey) {
+                            updateSubscriptionCard(cardKey, item.total_amount, item.count, 'Subscribers');
+                        }
                     });
 
                     // Update Additional Services
@@ -74,9 +97,9 @@ document.addEventListener('DOMContentLoaded', function () {
         Object.keys(subscriptionCards).forEach(key => {
             const card = subscriptionCards[key];
             if (card.valueElem) {
-                card.valueElem.textContent = 'Error Loading';
+                card.valueElem.textContent = 'Loading...';
                 if (card.detailElem) {
-                    card.detailElem.textContent = 'Unable to fetch data';
+                    card.detailElem.textContent = 'Fetching data';
                 }
             }
         });
@@ -88,27 +111,17 @@ document.addEventListener('DOMContentLoaded', function () {
         
         // Update value
         if (card.valueElem && value !== undefined) {
-            card.valueElem.textContent = `Ksh ${formatNumber(value)}`;
+            card.valueElem.textContent = `Ksh ${value.toLocaleString()}`;
         }
         
         // Update detail
         if (card.detailElem && detail !== undefined) {
             if (typeof detail === 'number') {
-                card.detailElem.textContent = `${detailPrefix}: ${detail}`;
+                card.detailElem.textContent = `${detailPrefix}: ${detail.toLocaleString()}`;
             } else {
                 card.detailElem.textContent = detail;
             }
         }
-    }
-
-    // Helper function to format large numbers
-    function formatNumber(num) {
-        if (num >= 1000000) {
-            return (num / 1000000).toFixed(1) + 'M';
-        } else if (num >= 1000) {
-            return (num / 1000).toFixed(1) + 'K';
-        }
-        return num.toFixed(0);
     }
 
     // Update date range display and fetch data

@@ -250,6 +250,9 @@ class RevenueAndMembershipView(View):
         
         # Calculate total revenue by summing the 'amount' field
         total_revenue = payments.aggregate(total=Sum('amount'))['total'] or 0.00
+        # Calculate the count of payments
+        result = payments.aggregate(count=Count('id'))
+        payment_count = result['count'] if result['count'] is not None else 0
         
         # Count the number of memberships and sum amounts by payment plan
         membership_types = payments.values('plan').annotate(
@@ -260,6 +263,7 @@ class RevenueAndMembershipView(View):
         # Create a formatted response
         response_data = {
             'total_revenue': total_revenue,
+            'total_subscribers': payment_count,
             'membership_types': [
                 {
                     'plan': membership['plan'],
