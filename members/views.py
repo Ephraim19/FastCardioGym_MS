@@ -37,7 +37,7 @@ def custom_authenticate(request):
                 
                 if auth_user is not None:
                     login(request, auth_user)
-                    messages.success(request, 'Successfully logged in!')
+                    # messages.success(request, 'Successfully logged in!')
                     return redirect('New member')  
                 else:
                     messages.error(request, 'Authentication failed.')
@@ -52,6 +52,9 @@ def custom_authenticate(request):
     
     # If not a POST request, just render the login page
     return render(request, 'index.html')
+
+def dashboard(request):
+    return HttpResponse("System dashboard")
 
 def newmember(request):
     return render(request, 'newmember.html')
