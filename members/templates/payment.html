@@ -1,0 +1,42 @@
+
+{% extends 'sidebar.html' %}
+{% load static %}
+
+{% block title %}Payment{% endblock %}
+
+{% block extra_styles %}
+    <link rel="stylesheet" href="{% static 'styles.css' %}">
+{% endblock %}
+
+{% block content %}
+  <div class="login-container">
+    <h1 style="font-size: medium;" >Payment for: <span style="color: black;" > {{ member.first_name }} {{ member.last_name }}</span> </h1>
+    <h1 style="font-size: medium;" >Total amount: <span style="color: black;" >Ksh </span> </h1>
+    <form method="post" >
+      {% csrf_token %}
+
+      <div class="form-group">
+        <label for="plan">Payment plan</label>
+        <select name="plan" id="plan" required>
+            <option value="" disabled selected>Select a payment plan</option>
+            <option value="monthly">Monthly</option>
+            <option value="quarterly">Quarterly</option>
+            <option value="yearly">Yearly</option>
+            <option value="student">Student Package</option>
+        </select>
+    </div>
+
+      <div class="form-group">
+        <label for="amount">Amount (Ksh)</label>
+        <input type="number" name = "amount" id="amount" placeholder="Amount (Ksh)" required>
+      </div>
+      <div class="form-group">
+        <label for="code">Payment code/number</label>
+        <input type="text" name = "code" id="code" placeholder="Payment code/number" required>
+      </div>
+
+      <button type="submit" class="login-button">Submit</button>
+    </form>
+  </div>
+
+{% endblock %}

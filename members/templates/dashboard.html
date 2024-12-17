@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FastCardio</title>
+  {% load static %}
+  <link rel="stylesheet" href="{% static 'dashboard.css' %}">
+</head>
+<body>
+  <div class="container">
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <h1>FastCardio</h1>
+        <button class="collapse-btn">
+          <span class="collapse-icon"></span>
+        </button>
+      </div>
+      <nav class="sidebar-nav">
+        <ul>
+          <li><a href="#">Dashboard</a></li>
+          <li><a href="#">Appointments</a></li>
+          <li><a href="#">Customers</a></li>
+          <li><a href="#">Financials</a></li>
+          <li><a href="#">Reports</a></li>
+          <li><a href="#">Settings</a></li>
+        </ul>
+      </nav>
+    </div>
+    <div class="main-content">
+      <div class="stats-container">
+        <div class="stats-item">
+          <h2>Total Clients</h2>
+          <p>124</p>
+          <div class="stats-indicator">4%</div>
+        </div>
+        <div class="stats-item">
+          <h2>Members</h2>
+          <p>65</p>
+          <div class="stats-indicator">12%</div>
+          <div class="stats-indicator">13%</div>
+          <div class="stats-indicator">40%</div>
+        </div>
+        <div class="stats-item">
+          <h2>New/Returning</h2>
+          <p>3/23</p>
+        </div>
+      </div>
+      <div class="customer-table">
+        <h2>All customers</h2>
+        <div class="table-header">
+          <input type="text" placeholder="Quick Search" />
+          <button>All members</button>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Last Visit</th>
+              <th>Age</th>
+              <th>Gender</th>
+              <th>Membership</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <img src="profile-pic.jpg" alt="Profile Picture">
+                Johani Watson
+              </td>
+              <td>Sep 20, 2019</td>
+              <td>31</td>
+              <td>Female</td>
+              <td>Golden</td>
+            </tr>
+            <tr>
+              <td>
+                <img src="profile-pic.jpg" alt="Profile Picture">
+                Bernard Pena
+              </td>
+              <td>Sep 20, 2019</td>
+              <td>66</td>
+              <td>Unknown</td>
+              <td>None</td>
+            </tr>
+            <tr>
+              <td>
+                <img src="profile-pic.jpg" alt="Profile Picture">
+                Brandon Stewart
+              </td>
+              <td>Sep 20, 2019</td>
+              <td>33</td>
+              <td>Male</td>
+              <td>Basic</td>
+            </tr>
+            <tr>
+              <td>
+                <img src="profile-pic.jpg" alt="Profile Picture">
+                Ricardo Webb
+              </td>
+              <td>Sep 20, 2019</td>
+              <td>43</td>
+              <td>Male</td>
+              <td>Silver</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <script src="{% static 'script.js' %}"></script>
+</body>
+</html>

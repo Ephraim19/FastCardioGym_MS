@@ -1,0 +1,47 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Dashboard{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'sidebar.css' %}">
+  {% block extra_styles %}{% endblock %}
+</head>
+<body>
+  <div class="flex h-screen">
+    <div id="sidebar" class="bg-gray-800 text-white w-64 p-6 transition-all duration-300 ease-in-out">
+      <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold">FastCardio</h1>
+        <button id="toggle-sidebar" class="text-gray-400 hover:text-white focus:outline-none">
+          <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <nav class="nav-container">
+        <a href="{% url 'Dashboard' %} " class="nav-link">Dashboard</a>
+        <a href="{% url 'New member' %} "  class="nav-link">New member</a>
+        <a href="{% url 'Members' %}" class="nav-link">All members</a>
+        <a href="{% url 'Checkin' %}" class="nav-link">Checkin/Checkout</a>
+        <a href="{% url 'Finance' %}" class="nav-link">Finance</a>
+        <a href="#" class="nav-link">Reminders</a>
+        <a href="#" class="nav-link">Expired</a>
+        <a href="#" class="nav-link">Not attending</a>
+        <a href="#" class="nav-link">Member progress</a>
+        <a href="#" class="nav-link">Reports</a>
+        <a href="#" class="nav-link">Log out</a>
+      </nav>
+    </div>
+
+    <div class="flex-1 p-8">
+      <!-- Main content area -->
+      {% block content %}
+      
+      {% endblock %}
+    </div>
+  </div>
+</body>
+</html>

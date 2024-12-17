@@ -1,0 +1,36 @@
+
+{% extends 'sidebar.html' %}
+{% load static %}
+
+{% block title %}New member{% endblock %}
+
+{% block extra_styles %}
+    <link rel="stylesheet" href="{% static 'styles.css' %}">
+{% endblock %}
+
+{% block content %}
+  <div class="login-container">
+    <h1>New Member</h1>
+    <form action="save/" method="post" >
+      {% csrf_token %}
+      <div class="form-group">
+        <label for="fname">FirstName</label>
+        <input type="text" name = "fname" id="fname" placeholder="First Name" required>
+      </div>
+      <div class="form-group">
+        <label for="lname">Last Name</label>
+        <input type="text" name = "lname" id="lname" placeholder="Last Name" required>
+      </div>
+      <div class="form-group">
+        <label for="phone">Phone number</label>
+        <input type="number" name = "phone" id="phone" placeholder="Phone number" required>
+      </div>
+        <div class="form-group">
+        <label for="info">Additional information</label>
+        <input type="text" name = "info" id="info" placeholder="Additional information" >
+      </div>
+      <button type="submit" class="login-button">Submit</button>
+    </form>
+  </div>
+
+{% endblock %}

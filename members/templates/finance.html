@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gym Finance Dashboard</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'finance.css' %}">
+
+</head>
+<body>
+    <div class="dashboard">
+        <aside class="sidebar">
+            <!-- <div class="sidebar-logo">Gym Finance</div>
+            <ul class="sidebar-menu">
+                <li><a href="#overview">Overview</a></li>
+                <li><a href="#revenue">Revenue</a></li>
+                <li><a href="#expenses">Expenses</a></li>
+                <li><a href="#memberships">Memberships</a></li>
+                <li><a href="#payroll">Payroll</a></li>
+                <li><a href="#reports">Reports</a></li>
+            </ul> -->
+        </aside>
+
+        <main class="main-content">
+            <header class="dashboard-header">
+                <h1>Financial Dashboard</h1>
+                <div class="date-range-selector">
+                    <label for="start-date">Start Date:</label>
+                    <input 
+                        type="date" 
+                        id="start-date" 
+                        name="start-date" 
+                        min="2024-01-01" 
+                        max="2024-12-31"
+                        value="2024-01-01"
+                    >
+                    
+                    <label for="end-date">End Date:</label>
+                    <input 
+                        type="date" 
+                        id="end-date" 
+                        name="end-date" 
+                        min="2024-01-01" 
+                        max="2024-12-31"
+                        value="2024-12-31"
+                    >
+                    
+                    <div class="selected-date-range" id="selected-range">
+                        Date Range: 2024-01-01 - 2024-12-31
+                    </div>
+                </div>
+            </header>
+
+            <section class="finance-grid">
+                <div class="finance-card">
+                    <h2 class="card-title">Total Revenue</h2>
+                    <div class="card-value">Ksh 0</div>
+                    <p>+12% from last month</p>
+                </div>
+
+                <div class="finance-card">
+                    <h2 class="card-title">Monthly Subscriptions</h2>
+                    <div class="card-value">Ksh 0</div>
+                    <p>Subscribers: 0</p>
+                </div>
+
+                <div class="finance-card">
+                    <h2 class="card-title">Quarterly Subscriptions</h2>
+                    <div class="card-value">Ksh 0</div>
+                    <p>Subscribers: 0</p>
+                </div>
+
+                <div class="finance-card">
+                    <h2 class="card-title">Yearly Subscriptions</h2>
+                    <div class="card-value">Ksh 0</div>
+                    <p>Subscribers: 0</p>
+                </div>
+
+                <div class="finance-card">
+                    <h2 class="card-title">Student Subscriptions</h2>
+                    <div class="card-value">Ksh 0</div>
+                    <p>Subscribers: 0</p>
+                </div>
+
+                <div class="finance-card">
+                    <h2 class="card-title">Additional Services</h2>
+                    <div class="card-value">Ksh 0</div>
+                    <p>Personal Training, Classes, Merchandise</p>
+                </div>
+
+                <div class="chart-container">
+                    <h2 class="card-title">Monthly Revenue Trends</h2>
+                    <div class="chart-placeholder" style="height: 300px; background-color: var(--accent-pink); display: flex; justify-content: center; align-items: center;">
+                        Chart Placeholder (Revenue Chart Goes Here)
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <h2 class="card-title">Expense Breakdown</h2>
+                    <div class="chart-placeholder" style="height: 300px; background-color: var(--light-pink); display: flex; justify-content: center; align-items: center;">
+                        Chart Placeholder (Expense Pie Chart Goes Here)
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+    <script src="{% static 'js/finance.js' %}"></script>
+
+</body>
+</html>

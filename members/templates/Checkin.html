@@ -1,0 +1,49 @@
+{% extends 'sidebar.html' %}
+{% load static %}
+
+{% block title %}Check-In/Out{% endblock %}
+
+{% block extra_styles %}
+    <link rel="stylesheet" href="{% static 'checkin.css' %}">
+{% endblock %}
+
+{% block content %}
+
+    <div class="container">
+        <div class="logo">In/Out</div>
+        
+        <input type="text" class="member-input" placeholder="Enter Member ID" id="memberIdInput">
+        
+        <div class="btn-group">
+            <button class="check-in-btn">Check In</button>
+            <button class="check-out-btn">Check Out</button>
+        </div>
+
+        <div id="statusMessage" class="status-message" style="display: none;"></div>
+
+        <div class="history-section">
+            <h3>Check-In/Checkout History</h3>
+            <table class="history-table" id="historyTable">
+                <thead>
+                    <tr>
+                        <th>Member ID</th>
+                        <th>Action</th>
+                        <th>Timestamp</th>
+                    </tr>
+                </thead>
+                <tbody id="historyTableBody">
+                    {% for record in recent_records %}
+                    <tr>
+                        <td>{{ record.member }}</td>
+                        <td>{{ record.get_action_display }}</td>
+                        <td>{{ record.timestamp|date:"Y-m-d H:i:s" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {% csrf_token %}
+    <script src="{% static 'js/checkin.js' %}"></script>
+{% endblock %}
