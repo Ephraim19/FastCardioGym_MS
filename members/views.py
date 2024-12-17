@@ -8,26 +8,50 @@ from django.db.models import Sum, Count
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from django.core.paginator import Paginator
-from datetime import timedelta
+from django.contrib.auth import authenticate, login
 from django.views import View
 from django.utils.dateparse import parse_date
 
-def login(request):
+def login_page(request):
     return render(request, 'index.html')
 
-def authenticate(request):
+
+def custom_authenticate(request):
     if request.method == "POST":
         username = request.POST.get('username')
         password = request.POST.get('password')
         
-        # Authenticate
-        user = User.objects.get(username=username)
+        # Check if username or password is empty
+        if not username or not password:
+            messages.error(request, 'Username and password are required.')
+            return render(request, 'index.html')
         
-        if user.is_superuser and user.check_password(password):
-            messages.success(request, 'Successfully logged in!')
-            return render(request, 'sidebar.html')
-        else:
-            return HttpResponse("Invalid logins")
+        try:
+            # First, attempt to get the user
+            user = User.objects.get(username=username)
+            
+            # Verify the password
+            if user.is_superuser and user.check_password(password):
+                # Use Django's built-in authentication
+                auth_user = authenticate(request, username=username, password=password)
+                
+                if auth_user is not None:
+                    login(request, auth_user)
+                    messages.success(request, 'Successfully logged in!')
+                    return redirect('New member')  
+                else:
+                    messages.error(request, 'Authentication failed.')
+            else:
+                messages.error(request, 'Invalid login credentials or insufficient permissions.')
+        
+        except User.DoesNotExist:
+            messages.error(request, 'User does not exist.')
+        
+        # If login fails, return to the login page with error messages
+        return render(request, 'index.html')
+    
+    # If not a POST request, just render the login page
+    return render(request, 'index.html')
 
 def newmember(request):
     return render(request, 'newmember.html')

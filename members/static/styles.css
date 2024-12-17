@@ -116,3 +116,13 @@ body {
     box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
     outline: none;
 }
+
+.error-message {
+  color: #ff0000; /* Red for error */
+  background-color: #ffe6e6; /* Light red background */
+  border: 1px solid #ff0000;
+  padding: 10px;
+  margin-bottom: 15px;
+  border-radius: 5px;
+  font-weight: bold;
+}

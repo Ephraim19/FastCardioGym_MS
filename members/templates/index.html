@@ -6,23 +6,51 @@
     <title>Fastcardio - Log In</title>
     {% load static %}
     <link rel="stylesheet" href="{% static 'styles.css' %}">
+    <style>
+        .messages {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+        }
+        .messages.error {
+            background-color: #ffdddd;
+            border: 1px solid #ff0000;
+            color: #ff0000;
+        }
+        .messages.success {
+            background-color: #ddffdd;
+            border: 1px solid #00ff00;
+            color: #008000;
+        }
+    </style>
 </head>
 <body>
-  <div class="login-container">
-    <h1>Fastcardio Fitness</h1>
-    <!-- <img style="height: 10%; width: 10%;"  src="{% get_media_prefix %}images/fastcardio.jpg" alt="Logo"> -->
-    <form action="dashboard/" method="post" >
-      {% csrf_token %}
-      <div class="form-group">
-        <label for="email">Username</label>
-        <input type="text" name = "username" id="email" placeholder="Enter your username" required>
-      </div>
-      <div class="form-group">
-        <label for="password">Password</label>
-        <input type="password" name = "password" id="password" placeholder="Enter your password" required>
-      </div>
-      <button type="submit" class="login-button">Log In</button>
-    </form>
-  </div>
+    <div class="login-container">
+        <h1>Fastcardio Fitness</h1>
+        
+        {% if messages %}
+            <div class="messages-container">
+                {% for message in messages %}
+                    <div class="messages {% if message.tags %}{{ message.tags }}{% endif %}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+        
+        <form action="{% url 'Dashboard' %}" method="post">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="email">Username</label>
+                <input type="text" name="username" id="email" placeholder="Enter your username" required>
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" name="password" id="password" placeholder="Enter your password" required>
+            </div>
+            <button type="submit" class="login-button">Log In</button>
+        </form>
+    </div>
 </body>
 </html>
