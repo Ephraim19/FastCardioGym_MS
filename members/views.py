@@ -65,13 +65,21 @@ def save_member(request):
         l_name = request.POST.get('lname')
         phone = request.POST.get('phone')
         info = request.POST.get('info')
+        gender = request.POST.get('gender')
+        
+        #Check if member already exists
+        member_exists = Member.objects.filter(phone_number=phone).exists()
+        if member_exists:
+            messages.error(request, 'Member with this phone number already exists. Please search for the member and update their records.')
+            return redirect('Members')
         
         # Create and save the member
         member = Member.objects.create(
             first_name=f_name,
             last_name=l_name,
             phone_number=phone,
-            additional_info=info
+            additional_info=info,
+            gender = gender
         )
         print(f"Saved: {member}")
         
@@ -303,3 +311,5 @@ class RevenueAndMembershipView(View):
         print(response_data)
         return JsonResponse(response_data)
 
+def reminders(request):
+    return render(request,"reminders.html")

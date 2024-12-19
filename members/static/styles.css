@@ -5,6 +5,8 @@ body {
     margin: 0;
     padding: 0;
   }
+
+  
   
   /* Login Container */
   .login-container {
@@ -125,4 +127,23 @@ body {
   margin-bottom: 15px;
   border-radius: 5px;
   font-weight: bold;
+}
+
+/* Styles for Name and Amount */
+.login-container .name-amount-container {
+  margin-bottom: 20px;
+  background-color: #ffe6f2; /* Light pink background */
+  border: 1px solid #ff69b4; /* Pink border */
+  border-radius: 8px; /* Rounded corners */
+  padding: 15px; /* Add spacing inside the box */
+  font-size: 18px; /* Larger font for readability */
+  font-weight: bold; /* Bold text for emphasis */
+  color: #333; /* Neutral text color for balance */
+  text-align: left; /* Align text to the left */
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Subtle shadow for a card-like effect */
+}
+
+.name-amount-container p {
+  margin: 5px 0; /* Spacing between name and amount lines */
+  color: #ff69b4; /* Pink color for the text */
 }

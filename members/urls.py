@@ -12,6 +12,7 @@ urlpatterns = [
     path('checkin/check-in-out/', views.check_in_out, name='check_in_out'),
     path('checkin/member-history/', views.get_member_history, name='member_history'),
     path('finance/',views.finance,name="Finance" ),
+    path('reminders/',views.reminders, name = "Reminders" ),
 
     path('revenue-summary/', views.RevenueAndMembershipView.as_view(), name='revenue-summary')
 

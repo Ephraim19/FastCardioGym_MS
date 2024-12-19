@@ -5,6 +5,24 @@
 
 {% block extra_styles %}
     <link rel="stylesheet" href="{% static 'allmembers.css' %}">
+    <style>
+        .messages {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+        }
+        .messages.error {
+            background-color: #ffdddd;
+            border: 1px solid #ff0000;
+            color: #ff0000;
+        }
+        .messages.success {
+            background-color: #ddffdd;
+            border: 1px solid #00ff00;
+            color: #008000;
+        }
+    </style>
 {% endblock %}
 
 {% block content %}
@@ -16,6 +34,16 @@
         <div class="search-container">
             <input type="text" id="searchInput" class="search-input" placeholder="Search members by name, phone, plan, or date...">
         </div>
+
+        {% if messages %}
+        <div class="messages-container">
+            {% for message in messages %}
+                <div class="messages {% if message.tags %}{{ message.tags }}{% endif %}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
 
         <table class="members-table">
             <thead>

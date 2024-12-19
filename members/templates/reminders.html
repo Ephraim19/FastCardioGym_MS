@@ -1,0 +1,80 @@
+
+{% extends 'sidebar.html' %}
+{% load static %}
+
+{% block title %}Reminders{% endblock %}
+
+{% block extra_styles %}
+    <link rel="stylesheet" href="{% static 'reminders.css' %}">
+{% endblock %}
+
+{% block content %}
+
+    <div class="dashboard">
+        <div class="dashboard-header">
+            <h1>Reminders</h1>
+            <div class="reminder-filters">
+                <button class="filter-btn active" id="attendance-btn">Attendance Reminders</button>
+                <button class="filter-btn" id="subscription-btn">Subscription Expiring</button>
+            </div>
+        </div>
+        
+        <div class="reminder-section">
+            <div class="reminder-card" id="attendance-reminders">
+                <div class="reminder-details">
+                    <h3>John Doe</h3>
+                    <p>Hasn't attended gym in 7 days</p>
+                    <p>Subscription Active</p>
+                </div>
+                <div class="reminder-action">
+                    <button class="btn">Send Reminder</button>
+                </div>
+            </div>
+
+            <div class="reminder-card" id="subscription-reminders" style="display: none;">
+                <div class="reminder-details">
+                    <h3>Jane Smith</h3>
+                    <p>Subscription expiring in 3 days</p>
+                    <p>Last attended: 5 days ago</p>
+                </div>
+                <div class="reminder-action">
+                    <button class="btn">Renew Subscription</button>
+                </div>
+            </div>
+
+            
+            <div class="reminder-card inactive" style="display: none;">
+                <div class="reminder-details">
+                    <h3>Mike Johnson</h3>
+                    <p>Subscription Expired</p>
+                    <p>No recent gym activity</p>
+                </div>
+                <div class="reminder-action">
+                    <button class="btn">Contact Member</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Filter button functionality
+        const attendanceBtn = document.getElementById('attendance-btn');
+        const subscriptionBtn = document.getElementById('subscription-btn');
+        const attendanceReminders = document.getElementById('attendance-reminders');
+        const subscriptionReminders = document.getElementById('subscription-reminders');
+
+        attendanceBtn.addEventListener('click', () => {
+            attendanceBtn.classList.add('active');
+            subscriptionBtn.classList.remove('active');
+            attendanceReminders.style.display = 'flex';
+            subscriptionReminders.style.display = 'none';
+        });
+
+        subscriptionBtn.addEventListener('click', () => {
+            subscriptionBtn.classList.add('active');
+            attendanceBtn.classList.remove('active');
+            subscriptionReminders.style.display = 'flex';
+            attendanceReminders.style.display = 'none';
+        });
+    </script>
+{% endblock %}
