@@ -1,0 +1,100 @@
+
+{% extends 'sidebar.html' %}
+{% load static %}
+
+{% block title %}Member profile{% endblock %}
+
+{% block extra_styles %}
+    <link rel="stylesheet" href="{% static 'member_details.css' %}">
+{% endblock %}
+
+{% block content %}
+    <div class="container">
+        <div class="profile-header">
+            <div class="profile-header-left">
+                <h1>{{ member.first_name }} {{ member.last_name }}</h1>
+                <span class="status-badge status-{{ membership_status|lower }}">{{ membership_status }}</span>
+                <a href="{% url 'Payment' member_id=member.id %}">
+                    <span class="status-badge status-{{ membership_status|lower }}">Payments</span>
+                </a>
+            </div>
+            <div class="profile-header-right">
+                {% if expiry_date %}
+                    <p>Membership expires: {{ expiry_date|date:"F d, Y" }}</p>
+                    {% if days_left <= 7 and days_left > 0 %}
+                        <p class="expiry-warning">{{ days_left }} days left to renew!</p>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="profile-grid">
+            <div class="profile-section">
+                <h2>Membership Statistics</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-number">{{ total_checkins }}</div>
+                        <div class="stat-label">Total Check-ins</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">{{ checkins_this_month }}</div>
+                        <div class="stat-label">Check-ins This Month</div>
+                    </div>
+                </div>
+                <ul class="info-list">
+                    <li><span class="label">Current Plan:</span> {{ current_plan|title }}</li>
+                    <li><span class="label">Member Since:</span> {{ member.date_joined|date:"F d, Y" }}</li>
+                    {% if last_checkin %}
+                    <li><span class="label">Last Check-in:</span> {{ last_checkin.timestamp|date:"F d, Y" }} at {{ last_checkin.timestamp|time:"g:i A" }}</li>
+                    {% endif %}
+                </ul>
+            </div>
+
+            <div class="profile-section">
+                <h2>Personal Information</h2>
+                <ul class="info-list">
+                    <li><span class="label">Member ID:</span> {{ member.id }}</li>
+                    <li><span class="label">Phone:</span> {{ member.phone_number }}</li>
+                    <li><span class="label">Gender:</span> {{ member.gender|title }}</li>
+                    {% if member.additional_info %}
+                    <li><span class="label">Additional Info:</span> {{ member.additional_info }}</li>
+                    {% endif %}
+                </ul>
+            </div>
+
+            <div class="profile-section">
+                <h2>Recent Payments</h2>
+                {% if recent_payments %}
+                    {% for payment in recent_payments %}
+                        <div class="payment-card">
+                            <p><span class="label">Plan:</span> {{ payment.get_plan_display }}</p>
+                            <p><span class="label">Amount:</span> ${{ payment.amount }}</p>
+                            <p><span class="label">Date:</span> {{ payment.payment_date|date:"F d, Y" }}</p>
+                            {% if payment.transaction_id %}
+                            <p><span class="label">Transaction ID:</span> {{ payment.transaction_id }}</p>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <p>No recent payments found.</p>
+                {% endif %}
+            </div>
+
+            <div class="profile-section">
+                <h2>Recent Check-ins</h2>
+                {% if recent_checkins %}
+                    <ul class="info-list checkin-list">
+                        {% for checkin in recent_checkins %}
+                            <li>
+                                <span>{{ checkin.timestamp|date:"F d, Y" }}</span>
+                                <span>{{ checkin.timestamp|time:"g:i A" }}</span>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p>No recent check-ins found.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+{% endblock %}

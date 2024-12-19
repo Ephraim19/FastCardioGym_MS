@@ -11,6 +11,8 @@ from django.core.paginator import Paginator
 from django.contrib.auth import authenticate, login
 from django.views import View
 from django.utils.dateparse import parse_date
+from django.utils import timezone
+from datetime import timedelta
 
 def login_page(request):
     return render(request, 'index.html')
@@ -116,13 +118,13 @@ def save_payment(request, member_id=None):
         print(plan)
         
         # Save the payment details
-        payment = PaymentDetails.objects.create(
+        PaymentDetails.objects.create(
             member=member,
             plan=plan,
             amount=amount,
             transaction_id=transaction_id
         )
-        print(payment)
+        messages.success(request, f'Payment saved successfully for { member}!')
         
         return redirect("Members")
     
@@ -143,7 +145,7 @@ def members(request):
         
         # Get the latest payment details
         latest_payment = payments.order_by('-payment_date').first()
-        
+        print(member.date_joined)
         # Prepare member data
         member_data = {
             'id': member.id,
@@ -164,6 +166,80 @@ def members(request):
     return render(request, 'allmembers.html', {
         'members': members_with_payments
     })
+    
+
+def calculate_expiry_date(payment_date, plan):
+    if plan == 'monthly':
+        return payment_date + timedelta(days=30)
+    elif plan == 'quarterly':
+        return payment_date + timedelta(days=90)
+    elif plan == 'yearly':
+        return payment_date + timedelta(days=365)
+    elif plan == 'student':
+        return payment_date + timedelta(days=30)  
+    return None
+
+def member_details(request, member_id):
+    # Get member or return 404
+    member = get_object_or_404(Member, pk=member_id)
+    
+    # Get all payments
+    recent_payments = PaymentDetails.objects.filter(member=member).order_by('-payment_date')[:3]
+    
+    # Get latest payment and calculate expiry
+    latest_payment = PaymentDetails.objects.filter(member=member).order_by('-payment_date').first()
+    
+    if latest_payment:
+        expiry_date = calculate_expiry_date(latest_payment.payment_date, latest_payment.plan)
+        days_left = (expiry_date - timezone.now().date()).days if expiry_date else 0
+        membership_status = "Active" if days_left > 0 and member.is_active else "Expired"
+    else:
+        expiry_date = None
+        days_left = 0
+        membership_status = "Inactive"
+
+    # Get check-in statistics
+    total_checkins = CheckInOutRecord.objects.filter(
+        member=member, 
+        action='check_in'
+    ).count()
+
+    # Get recent check-ins
+    recent_checkins = CheckInOutRecord.objects.filter(
+        member=member,
+        action='check_in'
+    ).order_by('-timestamp')[:5]
+
+    # Calculate check-ins this month
+    first_day_of_month = timezone.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    checkins_this_month = CheckInOutRecord.objects.filter(
+        member=member,
+        action='check_in',
+        timestamp__gte=first_day_of_month
+    ).count()
+
+    # Get last check-in date
+    last_checkin = CheckInOutRecord.objects.filter(
+        member=member,
+        action='check_in'
+    ).order_by('-timestamp').first()
+
+    context = {
+        'member': member,
+        'recent_payments': recent_payments,
+        'recent_checkins': recent_checkins,
+        'latest_payment': latest_payment,
+        'membership_status': membership_status,
+        'expiry_date': expiry_date,
+        'days_left': days_left,
+        'total_checkins': total_checkins,
+        'checkins_this_month': checkins_this_month,
+        'last_checkin': last_checkin,
+        'current_plan': latest_payment.plan if latest_payment else "No active plan"
+    }
+    
+    return render(request, 'member_details.html', context)
+
 
 def checkin(request):
 

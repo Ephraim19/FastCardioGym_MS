@@ -28,7 +28,7 @@
 {% block content %}
     <div class="dashboard">
         <header class="dashboard-header">
-            <h1>Member Management Dashboard</h1>
+            <h1>Member Management</h1>
         </header>
         
         <div class="search-container">
@@ -48,12 +48,11 @@
         <table class="members-table">
             <thead>
                 <tr>
-                    <th>Member Name</th>
-                    <th>Phone Number</th>
-                    <th>Additional Information</th>
-                    <th>Plan</th>
-                    <th>Paid Amount</th>
+                    <th>Name</th>
+                    <th>Phone</th>
                     <th>Date Joined</th>
+                    <th>Plan</th>
+                    <th>Profile</th>
                 </tr>
             </thead>
             <tbody id="memberTableBody">
@@ -61,10 +60,10 @@
                 <tr>
                     <td>{{ member.full_name }}</td>
                     <td>{{ member.phone_number }}</td>
-                    <td>{{ member.additional_info }}</td>
-                    <td>{{ member.latest_plan }}</td>
-                    <td>Ksh {{ member.total_amount_paid|floatformat:2 }}</td>
                     <td>{{ member.date_joined|date:"Y-m-d" }}</td>
+
+                    <td>{{ member.latest_plan }}</td>
+                    <td><a style="text-decoration: none; color: #FF69B4;" href="{% url 'Member details' member.id %}">View</a>
                 </tr>
                 {% endfor %}
 
