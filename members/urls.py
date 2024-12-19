@@ -10,13 +10,17 @@ urlpatterns = [
     path('newmember/payment/<int:member_id>/', views.save_payment, name='Payment'),
     path('members/',views.members,name='Members'),
     path('members/<int:member_id>/',views.member_details,name='Member details'),
+    path('member/freeze/<int:member_id>/', views.freeze_member, name='freeze'),
+    
     
     path('checkin/',views.checkin,name="Checkin" ),
     path('checkin/check-in-out/', views.check_in_out, name='check_in_out'),
     path('checkin/member-history/', views.get_member_history, name='member_history'),
     path('finance/',views.finance,name="Finance" ),
+    
     path('reminders/',views.reminders, name = "Reminders" ),
+    path('reminders/all/',views.all_reminders, name = "All Reminders" ),
 
-    path('revenue-summary/', views.RevenueAndMembershipView.as_view(), name='revenue-summary')
-
+    path('revenue-summary/', views.RevenueAndMembershipView.as_view(), name='revenue-summary'),
+    
 ]

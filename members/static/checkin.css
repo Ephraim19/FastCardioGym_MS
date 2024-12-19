@@ -17,19 +17,20 @@
 body {
     background-color: var(--background-color);
     display: flex;
+    justify-content: center; /* Center horizontally */
+    align-items: center;     /* Center vertically */
     min-height: 100vh;
 }
 
 .content-wrapper {
-    display: flex;
-    flex-grow: 1;
+    width: 100%; /* Full width to center content within */
 }
 
 .main-content {
-    flex-grow: 1;
+    width: 100%;  /* Ensure full width for centering */
     display: flex;
-    justify-content: center;
-    align-items: center;
+    justify-content: center; /* Center the container within main-content */
+    align-items: center;     /* Not strictly necessary if content-wrapper does not have height */
     padding: 20px;
 }
 
@@ -40,7 +41,10 @@ body {
     width: 100%;
     max-width: 500px;
     padding: 30px;
-    text-align: center;
+    /* Center all content within container */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
 .logo {
@@ -48,7 +52,7 @@ body {
     height: 100px;
     background-color: var(--primary-pink);
     border-radius: 50%;
-    margin: 0 auto 20px;
+    margin-bottom: 20px;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -91,6 +95,7 @@ body {
 }
 
 .btn-group {
+    width: 100%;
     display: flex;
     gap: 10px;
 }
@@ -100,6 +105,7 @@ body {
     padding: 10px;
     border-radius: 8px;
     font-weight: bold;
+    width: 100%;
 }
 
 .status-success {

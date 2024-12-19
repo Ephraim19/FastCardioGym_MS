@@ -1,4 +1,3 @@
-
 {% extends 'sidebar.html' %}
 {% load static %}
 
@@ -9,72 +8,144 @@
 {% endblock %}
 
 {% block content %}
-
     <div class="dashboard">
         <div class="dashboard-header">
             <h1>Reminders</h1>
             <div class="reminder-filters">
-                <button class="filter-btn active" id="attendance-btn">Attendance Reminders</button>
-                <button class="filter-btn" id="subscription-btn">Subscription Expiring</button>
+                <button class="filter-btn active" data-type="all">All</button>
+                <button class="filter-btn" data-type="attendance">Attendance</button>
+                <button class="filter-btn" data-type="subscription">Subscription</button>
+                <button class="filter-btn" data-type="sent">Sent</button>
             </div>
         </div>
         
-        <div class="reminder-section">
-            <div class="reminder-card" id="attendance-reminders">
-                <div class="reminder-details">
-                    <h3>John Doe</h3>
-                    <p>Hasn't attended gym in 7 days</p>
-                    <p>Subscription Active</p>
-                </div>
-                <div class="reminder-action">
-                    <button class="btn">Send Reminder</button>
-                </div>
-            </div>
-
-            <div class="reminder-card" id="subscription-reminders" style="display: none;">
-                <div class="reminder-details">
-                    <h3>Jane Smith</h3>
-                    <p>Subscription expiring in 3 days</p>
-                    <p>Last attended: 5 days ago</p>
-                </div>
-                <div class="reminder-action">
-                    <button class="btn">Renew Subscription</button>
-                </div>
-            </div>
-
-            
-            <div class="reminder-card inactive" style="display: none;">
-                <div class="reminder-details">
-                    <h3>Mike Johnson</h3>
-                    <p>Subscription Expired</p>
-                    <p>No recent gym activity</p>
-                </div>
-                <div class="reminder-action">
-                    <button class="btn">Contact Member</button>
-                </div>
-            </div>
+        <div class="reminder-section" id="reminder-container">
+            <!-- Reminders will be dynamically inserted here -->
         </div>
     </div>
 
     <script>
-        // Filter button functionality
-        const attendanceBtn = document.getElementById('attendance-btn');
-        const subscriptionBtn = document.getElementById('subscription-btn');
-        const attendanceReminders = document.getElementById('attendance-reminders');
-        const subscriptionReminders = document.getElementById('subscription-reminders');
-
-        attendanceBtn.addEventListener('click', () => {
-            attendanceBtn.classList.add('active');
-            subscriptionBtn.classList.remove('active');
-            attendanceReminders.style.display = 'flex';
-            subscriptionReminders.style.display = 'none';
+    document.addEventListener('DOMContentLoaded', function() {
+        const reminderContainer = document.getElementById('reminder-container');
+        const filterButtons = document.querySelectorAll('.filter-btn');
+        
+        // Function to create reminder card HTML
+        function createReminderCard(reminder) {
+            let details = '';
+            if (reminder.type === 'attendance') {
+                details = `
+                    <p>Hasn't attended gym in ${reminder.days_absent} days</p>
+                    <p>Subscription Active</p>
+                `;
+            } else if (reminder.type === 'subscription') {
+                details = `
+                    <p>Subscription expiring in ${reminder.days_until_expiry} days</p>
+                    <p>Last attended: ${reminder.last_attended ? new Date(reminder.last_attended).toLocaleDateString() : 'Never'}</p>
+                `;
+            } else if (reminder.category) {  // For sent reminders
+                details = `
+                    <p>${reminder.reminder}</p>
+                    <p>Sent on: ${reminder.sent_date}</p>
+                    <p>Type: ${reminder.category}</p>
+                `;
+            }
+            
+            return `
+                <div class="reminder-card">
+                    <div class="reminder-details">
+                        <h3>${reminder.name}</h3>
+                        ${details}
+                    </div>
+                    <div class="reminder-action">
+                        <button class="btn send-reminder" data-member-id="${reminder.member_id}">
+                            Send Reminder
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Function to load reminders
+        async function loadReminders(type) {
+            try {
+                const response = await fetch(`/reminders/all/?type=${type}`, {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+                const data = await response.json();
+                
+                reminderContainer.innerHTML = '';
+                
+                if (type === 'all') {
+                    [...data.attendance_reminders, ...data.subscription_reminders].forEach(reminder => {
+                        reminderContainer.innerHTML += createReminderCard(reminder);
+                    });
+                } else {
+                    data.reminders.forEach(reminder => {
+                        reminderContainer.innerHTML += createReminderCard(reminder);
+                    });
+                }
+                
+                // Add event listeners to new send reminder buttons
+                document.querySelectorAll('.send-reminder').forEach(button => {
+                    button.addEventListener('click', handleSendReminder);
+                });
+            } catch (error) {
+                console.error('Error loading reminders:', error);
+            }
+        }
+        
+        // Function to handle sending reminder
+        async function handleSendReminder(event) {
+            const memberId = event.target.dataset.memberId;
+            try {
+                const response = await fetch('/reminders/send/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({ member_id: memberId })
+                });
+                
+                if (response.ok) {
+                    // Refresh the reminders list
+                    const activeButton = document.querySelector('.filter-btn.active');
+                    loadReminders(activeButton.dataset.type);
+                }
+            } catch (error) {
+                console.error('Error sending reminder:', error);
+            }
+        }
+        
+        // Function to get CSRF token
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        
+        // Add click handlers to filter buttons
+        filterButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                filterButtons.forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+                loadReminders(button.dataset.type);
+            });
         });
-
-        subscriptionBtn.addEventListener('click', () => {
-            subscriptionBtn.classList.add('active');
-            attendanceBtn.classList.remove('active');
-            subscriptionReminders.style.display = 'flex';
-            attendanceReminders.style.display = 'none';
-        });
+        
+        // Load initial reminders
+        loadReminders('all');
+    });
     </script>
 {% endblock %}

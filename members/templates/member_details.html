@@ -15,7 +15,10 @@
                 <h1>{{ member.first_name }} {{ member.last_name }}</h1>
                 <span class="status-badge status-{{ membership_status|lower }}">{{ membership_status }}</span>
                 <a href="{% url 'Payment' member_id=member.id %}">
-                    <span class="status-badge status-{{ membership_status|lower }}">Payments</span>
+                    <span class="status-badge status-{{ membership_status|lower }}">New Payment</span>
+                </a>
+                <a href="{% url 'freeze' member_id=member.id %}">
+                    <span class="status-badge status-{{ membership_status|lower }}">Freeze</span>
                 </a>
             </div>
             <div class="profile-header-right">
@@ -68,7 +71,7 @@
                     {% for payment in recent_payments %}
                         <div class="payment-card">
                             <p><span class="label">Plan:</span> {{ payment.get_plan_display }}</p>
-                            <p><span class="label">Amount:</span> ${{ payment.amount }}</p>
+                            <p><span class="label">Amount:</span> Ksh {{ payment.amount }}</p>
                             <p><span class="label">Date:</span> {{ payment.payment_date|date:"F d, Y" }}</p>
                             {% if payment.transaction_id %}
                             <p><span class="label">Transaction ID:</span> {{ payment.transaction_id }}</p>

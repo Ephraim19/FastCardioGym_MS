@@ -8,6 +8,7 @@ class Member(models.Model):
     phone_number = models.CharField(max_length=15)
     date_joined = models.DateTimeField(auto_now_add=True)
     is_active = models.BooleanField(default=True)
+    is_frozen = models.BooleanField(default=False)
     additional_info = models.TextField(blank=True,null=True)
     gender = models.CharField(max_length= 6)
 
@@ -62,3 +63,22 @@ class CheckInOutRecord(models.Model):
     def __str__(self):
         return f"{self.member} - {self.get_action_display()} at {self.timestamp}"
     
+
+class gym_reminder(models.Model):
+    
+    REMINDER_TYPES = [
+        ('attendance', 'Attendance Reminder'),
+        ('expiry', 'Subscription Expiry Reminder'),
+    ]
+    
+    member = models.ForeignKey(Member, on_delete=models.CASCADE, related_name='reminders')
+    reminder = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    category = models.CharField(max_length=20, choices=REMINDER_TYPES)
+    is_sent = models.BooleanField(default=False)
+    
+    class Meta:
+        ordering = ['created_at']
+    
+    def __str__(self):
+        return f"{self.member} - {self.reminder_date}"

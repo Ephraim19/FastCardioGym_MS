@@ -2,7 +2,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse, JsonResponse
 from django.contrib.auth.models import User
-from .models import Member, PaymentDetails, CheckInOutRecord
+from .models import Member, PaymentDetails, CheckInOutRecord, gym_reminder
 from django.contrib import messages
 from django.db.models import Sum, Count
 from django.views.decorators.http import require_http_methods
@@ -145,7 +145,6 @@ def members(request):
         
         # Get the latest payment details
         latest_payment = payments.order_by('-payment_date').first()
-        print(member.date_joined)
         # Prepare member data
         member_data = {
             'id': member.id,
@@ -387,5 +386,113 @@ class RevenueAndMembershipView(View):
         print(response_data)
         return JsonResponse(response_data)
 
+def all_reminders(request):
+    # Get current time
+    current_time = timezone.now()
+    
+    # Get last check-in records for all members
+    last_checkins = CheckInOutRecord.objects.filter(
+        action='check_in'
+    ).order_by('member_id', '-timestamp').distinct('member_id')
+    
+    # Get all active members
+    active_members = Member.objects.filter(is_active=True)
+    
+    # Get all payment details
+    payment_details = PaymentDetails.objects.filter(
+        member__is_active=True
+    ).order_by('member_id', '-payment_date').distinct('member_id')
+    
+    attendance_reminders = []
+    subscription_reminders = []
+    
+    for member in active_members:
+        member_checkin = last_checkins.filter(member=member).first()
+        member_payment = payment_details.filter(member=member).first()
+        
+        # Check for attendance reminder (7 days without check-in)
+        if member_checkin and (current_time - member_checkin.timestamp).days >= 7:
+            attendance_reminders.append({
+                'member_id': member.id,
+                'name': str(member),
+                'days_absent': (current_time - member_checkin.timestamp).days,
+                'type': 'attendance'
+            })
+        
+        # Check for subscription reminder
+        if member_payment:
+            # Calculate expiry date based on payment plan
+            if member_payment.plan == 'monthly':
+                expiry_date = member_payment.payment_date + timedelta(days=30)
+            elif member_payment.plan == 'quarterly':
+                expiry_date = member_payment.payment_date + timedelta(days=90)
+            elif member_payment.plan == 'yearly':
+                expiry_date = member_payment.payment_date + timedelta(days=365)
+            else:  # student package
+                expiry_date = member_payment.payment_date + timedelta(days=30)
+            
+            days_until_expiry = (expiry_date - timezone.now().date()).days
+            
+            if days_until_expiry <= 3 and days_until_expiry >= 0:
+                subscription_reminders.append({
+                    'member_id': member.id,
+                    'name': str(member),
+                    'days_until_expiry': days_until_expiry,
+                    'last_attended': member_checkin.timestamp if member_checkin else None,
+                    'type': 'subscription'
+                })
+    
+    # Get sent reminders
+    sent_reminders = gym_reminder.objects.filter(
+        is_sent=True
+    ).select_related('member').order_by('-created_at')
+    
+    context = {
+        'attendance_reminders': attendance_reminders,
+        'subscription_reminders': subscription_reminders,
+        'sent_reminders': sent_reminders,
+    }
+    
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        # If AJAX request, return JSON
+        reminder_type = request.GET.get('type', 'all')
+        if reminder_type == 'attendance':
+            return JsonResponse({'reminders': attendance_reminders})
+        elif reminder_type == 'subscription':
+            return JsonResponse({'reminders': subscription_reminders})
+        elif reminder_type == 'sent':
+            return JsonResponse({
+                'reminders': [{
+                    'member_id': reminder.member.id,
+                    'name': str(reminder.member),
+                    'reminder': reminder.reminder,
+                    'sent_date': reminder.created_at.strftime('%Y-%m-%d %H:%M'),
+                    'category': reminder.category
+                } for reminder in sent_reminders]
+            })
+        else:
+            return JsonResponse({
+                'attendance_reminders': attendance_reminders,
+                'subscription_reminders': subscription_reminders
+            })
+    
+    return render(request, 'reminders.html', context)
+
 def reminders(request):
     return render(request,"reminders.html")
+
+def freeze_member(request,member_id):
+    
+    if request.method == "POST":
+        freeze_time = request.POST.get('freezeTime')
+        print(freeze_time)
+        member = get_object_or_404(Member, id=member_id)
+        
+        # Freeze the membership
+        member.is_frozen = True
+        # member.freeze_days = freeze_days
+        member.save()
+        messages.success(request, f'Membership for {member} has been frozen for days.')
+        return redirect('Members')
+    
+    return render(request, 'freeze.html')

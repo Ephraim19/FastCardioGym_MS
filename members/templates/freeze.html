@@ -1,0 +1,41 @@
+
+{% extends 'sidebar.html' %}
+{% load static %}
+
+{% block title %}Freeze {% endblock %}
+
+{% block extra_styles %}
+    <link rel="stylesheet" href="{% static 'styles.css' %}">
+{% endblock %}
+
+{% block content %}
+  <div class="login-container">
+
+    <h1 style="font-size: large;" >Freeze </h1>
+    
+    <form method="post" >
+      {% csrf_token %}
+
+      <div class="form-group">
+        <label for="plan">Freeze for: {{ member.first_name }} {{ member.last_name }}</label>
+        <select name="freezeTime" id="freezeTime" required>
+            <option value="" disabled selected>Select the duration</option>
+            <option value="1week">1 week</option>
+            <option value="2weeks">2 Weeks</option>
+            <option value="3weeks">3 Weeks</option>
+            <option value="4weeks">4 Weeks</option>
+        </select>
+    </div>
+
+      <!-- <div class="form-group">
+        <label for="amount">Amount Paid (Ksh)</label>
+        <input type="number" name = "amount" id="amount" placeholder="Amount (Ksh)" >
+      </div> -->
+
+      <button type="submit" class="login-button">Submit</button>
+
+
+    </form>
+  </div>
+
+{% endblock %}
