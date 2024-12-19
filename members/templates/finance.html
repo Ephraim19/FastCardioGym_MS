@@ -1,36 +1,19 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gym Finance Dashboard</title>
-    {% load static %}
+
+{% extends 'sidebar.html' %}
+{% load static %}
+
+{% block title %}New member{% endblock %}
+
+{% block extra_styles %}
     <link rel="stylesheet" href="{% static 'finance.css' %}">
+{% endblock %}
 
-</head>
-<body>
-    <div class="dashboard">
-        <aside class="sidebar">
-            <div class="sidebar-logo">FastCardio</div>
-            <ul class="sidebar-menu">
-                <li><a href="{% url 'Dashboard' %} " class="nav-link">Dashboard</a></li>
-                <li><a href="{% url 'New member' %} "  class="nav-link">New member</a></li>
-                <li><a href="{% url 'Members' %}" class="nav-link">All members</a></li>
-                <li><a href="{% url 'Checkin' %}" class="nav-link">Checkin/Checkout</a></li>
-                <li><a href="{% url 'Finance' %}" class="nav-link">Finance</a></li>
-                <li><a href="#" class="nav-link">Reminders</a></li>
-                <li><a href="#" class="nav-link">Expired</a></li>
-                <li><a href="#" class="nav-link">Member progress</a></li>
-                <li><a href="#" class="nav-link">Reports</a></li>
-                <li><a href="#" class="nav-link">Freeze</a></li>
-                <li><a href="#" class="nav-link">Log out</a></li>
+{% block content %}
 
-            </ul>
-        </aside>
 
         <main class="main-content">
             <header class="dashboard-header">
-                <h1>Financial Dashboard</h1>
+                <h1>Finance</h1>
                 <div class="date-range-selector">
                     <label for="start-date">Start Date:</label>
                     <input 
@@ -110,8 +93,7 @@
                 </div>
             </section>
         </main>
-    </div>
+    
     <script src="{% static 'js/finance.js' %}"></script>
 
-</body>
-</html>
+{% endblock %}

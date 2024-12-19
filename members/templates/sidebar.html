@@ -11,11 +11,15 @@
 </head>
 <body>
     <div class="wrapper">
+        <!-- Toggle Button Container -->
+        <div class="toggle-container">
+            <button id="sidebarToggle" class="toggle-btn">☰</button>
+        </div>
+
         <!-- Sidebar -->
         <nav id="sidebar">
             <div class="sidebar-header">
                 <h2>FastCardio</h2>
-                <button id="sidebarToggle" class="toggle-btn">☰</button>
             </div>
             
             <ul class="sidebar-menu">
@@ -41,9 +45,46 @@
     </div>
 
     <script>
-        document.getElementById('sidebarToggle').addEventListener('click', function() {
-            document.getElementById('sidebar').classList.toggle('collapsed');
-            document.getElementById('content').classList.toggle('expanded');
+        document.addEventListener('DOMContentLoaded', function() {
+            const sidebar = document.getElementById('sidebar');
+            const content = document.getElementById('content');
+            const toggle = document.getElementById('sidebarToggle');
+            const sidebarLinks = document.querySelectorAll('.sidebar-menu li a');
+            
+            // Set initial state based on localStorage if available
+            const sidebarState = localStorage.getItem('sidebarState');
+            if (sidebarState === 'collapsed') {
+                sidebar.classList.add('collapsed');
+                content.classList.add('expanded');
+            }
+
+            // Toggle sidebar
+            toggle.addEventListener('click', function() {
+                sidebar.classList.toggle('collapsed');
+                content.classList.toggle('expanded');
+                
+                // Store sidebar state
+                localStorage.setItem('sidebarState', 
+                    sidebar.classList.contains('collapsed') ? 'collapsed' : 'expanded'
+                );
+            });
+
+            // Handle active state for sidebar links
+            const currentPath = window.location.pathname;
+
+            sidebarLinks.forEach(link => {
+                // Set active class if the link matches current URL
+                if (link.getAttribute('href') === currentPath) {
+                    link.classList.add('active');
+                }
+
+                link.addEventListener('click', function() {
+                    // Remove active class from all links
+                    sidebarLinks.forEach(l => l.classList.remove('active'));
+                    // Add active class to clicked link
+                    this.classList.add('active');
+                });
+            });
         });
     </script>
 </body>
