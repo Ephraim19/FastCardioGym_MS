@@ -7,7 +7,7 @@ from django.db.models import Sum, Count
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from django.core.paginator import Paginator
-from django.contrib.auth import authenticate, login
+from django.contrib.auth import authenticate, login, logout
 from django.views import View
 from django.utils.dateparse import parse_date
 from django.utils import timezone
@@ -56,6 +56,10 @@ def custom_authenticate(request):
     # If not a POST request, just render the login page
     return render(request, 'index.html')
 
+
+def custom_logout(request):
+    logout(request)
+    return redirect('login') 
 
 
 def dashboard(request):

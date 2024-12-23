@@ -128,10 +128,10 @@ document.addEventListener('DOMContentLoaded', function () {
                     legend: {
                         position: 'top'
                     },
-                    title: {
-                        display: true,
-                        text: 'Monthly Revenue and Subscriptions Trend'
-                    }
+                    // title: {
+                    //     display: true,
+                    //     text: 'Monthly Revenue and Subscriptions Trend'
+                    // }
                 }
             }
         });
