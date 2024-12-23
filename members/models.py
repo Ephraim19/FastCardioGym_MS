@@ -91,3 +91,14 @@ class Freeze_member(models.Model):
     freeze_time = models.IntegerField()
     frozen_date = models.DateField(auto_now_add=True)
     
+
+class Expense(models.Model):
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    expense_type = models.TextField()
+    date = models.DateField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-date']
+    
+    def __str__(self):
+        return f"{self.expense_type}-{self.amount} 0n {self.date}"

@@ -23,6 +23,6 @@ urlpatterns = [
     
     path('reminders/',views.reminders, name = "Reminders" ),
     path('reminders/all/',views.all_reminders, name = "All Reminders" ),
-
     
+    path('expenses/',views.expenses,name="Expenses" ),
 ]

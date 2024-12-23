@@ -1,13 +1,15 @@
 {% extends 'sidebar.html' %}
 {% load static %}
 
-{% block title %}New member{% endblock %}
+{% block title %}Finance{% endblock %}
 
 {% block extra_styles %}
     <link rel="stylesheet" href="{% static 'finance.css' %}">
 {% endblock %}
 
 {% block content %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
         <main class="main-content">
             <header class="dashboard-header">
                 <h1>Finance</h1>
@@ -37,6 +39,16 @@
                     </div>
                 </div>
             </header>
+
+            {% if messages %}
+            <div class="messages-container">
+                {% for message in messages %}
+                    <div class="messages {% if message.tags %}{{ message.tags }}{% endif %}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+            {% endif %}
 
             <section class="finance-grid">
                 <div class="finance-card">
@@ -89,17 +101,19 @@
 
                 <div class="chart-container">
                     <h2 class="card-title">Monthly Revenue Trends</h2>
-                    <div class="chart-placeholder" style="height: 300px; background-color: var(--accent-pink); display: flex; justify-content: center; align-items: center;">
-                        Chart Placeholder (Revenue Chart Goes Here)
+                    <div style="height: 400px; position: relative;">
+                        <canvas id="monthlyRevenueChart"></canvas>
                     </div>
                 </div>
 
                 <div class="chart-container">
                     <h2 class="card-title">Expense Breakdown</h2>
-                    <div class="chart-placeholder" style="height: 300px; background-color: var(--light-pink); display: flex; justify-content: center; align-items: center;">
-                        Chart Placeholder (Expense Pie Chart Goes Here)
+                    <div class="expense-chart-container" style="height: 300px;">
+                        <canvas id="expenseChart"></canvas>
                     </div>
                 </div>
+                
+
             </section>
         </main>
     

@@ -1,8 +1,7 @@
-# views.py
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse, JsonResponse
 from django.contrib.auth.models import User
-from .models import Member, PaymentDetails, CheckInOutRecord, gym_reminder, Freeze_member
+from .models import Member, PaymentDetails, CheckInOutRecord, gym_reminder, Freeze_member, Expense
 from django.contrib import messages
 from django.db.models import Sum, Count
 from django.views.decorators.http import require_http_methods
@@ -12,7 +11,9 @@ from django.contrib.auth import authenticate, login
 from django.views import View
 from django.utils.dateparse import parse_date
 from django.utils import timezone
-from datetime import timedelta
+from datetime import timedelta,datetime
+from django.db.models.functions import TruncMonth
+from django.db.models import Count, Q
 
 def login_page(request):
     return render(request, 'index.html')
@@ -55,11 +56,7 @@ def custom_authenticate(request):
     # If not a POST request, just render the login page
     return render(request, 'index.html')
 
-from django.shortcuts import render
-from django.utils import timezone
-from django.db.models import Count, Q
-from datetime import timedelta
-from .models import Member, CheckInOutRecord, PaymentDetails, Freeze_member
+
 
 def dashboard(request):
     today = timezone.now().date()
@@ -214,8 +211,6 @@ def save_payment(request, member_id=None):
         plan = request.POST.get('plan')
         amount = request.POST.get('amount')
         transaction_id = request.POST.get('code')
-
-        print(plan)
         
         # Save the payment details
         PaymentDetails.objects.create(
@@ -230,12 +225,6 @@ def save_payment(request, member_id=None):
     
     # Render payment form with member context
     return render(request, 'payment.html', {'member': member})
-
-from django.shortcuts import render
-from django.db.models import Sum
-from django.utils import timezone
-from datetime import timedelta
-from .models import Member, PaymentDetails
 
 def calculate_expiry_date(payment_date, plan):
     if not payment_date:
@@ -542,7 +531,27 @@ def finance(request):
 
 
 
+
 class RevenueAndMembershipView(View):
+    def get_monthly_revenue_data(self, start_date=None, end_date=None):
+        if not end_date:
+            end_date = datetime.now().date()
+        if not start_date:
+            start_date = end_date - timedelta(days=365)
+
+    # Get monthly revenue data
+        monthly_revenue = PaymentDetails.objects.filter(
+            payment_date__gte=start_date,
+            payment_date__lte=end_date
+            ).annotate(
+                month=TruncMonth('payment_date')
+            ).values('month').annotate(
+                total_revenue=Sum('amount'),
+                total_subscriptions=Count('id')
+            ).order_by('month')
+            
+        return monthly_revenue
+
     def get(self, request):
         # Get date range from request parameters
         start_date = request.GET.get('start_date')
@@ -550,27 +559,69 @@ class RevenueAndMembershipView(View):
         
         # Filter payments by date range if provided
         filters = {}
+        expense_filters = {}
         if start_date:
             filters['payment_date__gte'] = parse_date(start_date)
+            expense_filters['date__gte'] = parse_date(start_date)
         if end_date:
             filters['payment_date__lte'] = parse_date(end_date)
+            expense_filters['date__lte'] = parse_date(end_date)
         
-        # Query the database with optional filters
+        # Query payments with optional filters
         payments = PaymentDetails.objects.filter(**filters)
         
-        # Calculate total revenue by summing the 'amount' field
+        # Calculate total revenue and payment count
         total_revenue = payments.aggregate(total=Sum('amount'))['total'] or 0.00
-        # Calculate the count of payments
         result = payments.aggregate(count=Count('id'))
         payment_count = result['count'] if result['count'] is not None else 0
         
-        # Count the number of memberships and sum amounts by payment plan
+        # Count memberships and sum amounts by payment plan
         membership_types = payments.values('plan').annotate(
             count=Count('id'),
             total_amount=Sum('amount')
         )
         
-        # Create a formatted response
+        # Query expenses with date filters
+        expenses = Expense.objects.filter(**expense_filters)
+        
+        # Group expenses by type and calculate totals
+        expense_summary = expenses.values('expense_type').annotate(
+            total_amount=Sum('amount')
+        ).order_by('expense_type')
+        
+        
+        # Convert expense summary to a dictionary with expense types as keys
+        expense_data = {
+            expense['expense_type'].lower(): float(expense['total_amount'])
+            for expense in expense_summary
+        }
+        
+        # Ensure all expense types are present in the response
+        expense_types = ['rent', 'salary', 'water', 'cleaners', 'food', 'other']
+        formatted_expenses = {
+            expense_type: expense_data.get(expense_type, 0)
+            for expense_type in expense_types
+        }
+        #Total expenses
+        total_expenses = sum(formatted_expenses.values())
+        
+        # Get monthly revenue data
+        monthly_revenue = self.get_monthly_revenue_data(
+            start_date=parse_date(start_date) if start_date else None,
+            end_date=parse_date(end_date) if end_date else None
+        )
+        
+        # Format monthly data for the response
+        monthly_data = [
+            {
+                'month': item['month'].strftime('%B %Y'),
+                'revenue': float(item['total_revenue']),
+                'subscriptions': item['total_subscriptions']
+                }
+            for item in monthly_revenue
+        ]
+        
+        # Create the response data
         response_data = {
             'total_revenue': total_revenue,
             'total_subscribers': payment_count,
@@ -581,8 +632,12 @@ class RevenueAndMembershipView(View):
                     'total_amount': membership['total_amount']
                 }
                 for membership in membership_types
-            ]
+            ],
+            'expenses': formatted_expenses,
+            'total_expenses': total_expenses,
+            'monthly_revenue': monthly_data
         }
+        
         return JsonResponse(response_data)
 
 def all_reminders(request):
@@ -706,3 +761,24 @@ def freeze_member(request,member_id):
         return redirect('Members')
     
     return render(request, 'freeze.html')
+
+
+# def add_expense(request):
+#     return render(request, 'expenses.html')
+
+def expenses(request):
+    if request.method == "POST":
+        expense = request.POST.get('expense')
+        amount = request.POST.get('amount')
+        
+        try:
+            Expense.objects.create(
+                expense_type=expense,
+                amount=amount
+            )
+            messages.success(request, 'Expense saved successfully!')
+            return redirect('Finance')
+        except Exception as e:
+            print(e)
+            messages.error(request, 'Error saving expense.')
+    return render(request, 'expenses.html')

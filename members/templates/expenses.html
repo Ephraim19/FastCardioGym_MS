@@ -1,0 +1,44 @@
+
+{% extends 'sidebar.html' %}
+{% load static %}
+
+{% block title %}Expenses{% endblock %}
+
+{% block extra_styles %}
+    <link rel="stylesheet" href="{% static 'styles.css' %}">
+{% endblock %}
+
+{% block content %}
+  <div class="login-container">
+
+    <h1 style="font-size: large;" >Expenses</h1>
+    
+  
+    <form method="post" action="{% url 'Expenses' %}" >
+      {% csrf_token %}
+
+      <div class="form-group">
+        <label for="plan">Expense type</label>
+        <select name="expense" id="plan" onchange="updateAmount()" required>
+            <option value="" disabled selected>Select the expense type</option>
+            <option value="rent">Rent</option>
+            <option value="salary">Salary</option>
+            <option value="water">Water</option>
+            <option value="cleaners">Cleaners</option>
+            <option value="food">Food</option>
+            <option value="other">Other</option>
+        </select>
+    </div>
+
+      <div class="form-group">
+        <label for="amount">Amount Paid (Ksh)</label>
+        <input type="number" name = "amount" id="amount" placeholder="Amount (Ksh)" required>
+      </div>
+
+      <button type="submit" class="login-button">Submit</button>
+
+    </form>
+
+  </div>
+
+{% endblock %}

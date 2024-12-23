@@ -147,3 +147,20 @@ body {
   margin: 5px 0; /* Spacing between name and amount lines */
   color: #ff69b4; /* Pink color for the text */
 }
+
+.messages {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 15px;
+    border-radius: 5px;
+}
+.messages.error {
+    background-color: #ffdddd;
+    border: 1px solid #ff0000;
+    color: #ff0000;
+}
+.messages.success {
+    background-color: #ddffdd;
+    border: 1px solid #00ff00;
+    color: #008000;
+}
