@@ -18,7 +18,7 @@
                     <span class="status-badge status-{{ membership_status|lower }}">New Payment</span>
                 </a>
                 <a href="{% url 'freeze' member_id=member.id %}">
-                    <span class="status-badge status-{{ membership_status|lower }}">Freeze</span>
+                    <span class="status-badge status-{{ membership_status|lower }}">Freeze: {{ member.is_frozen }}</span>
                 </a>
             </div>
             <div class="profile-header-right">

@@ -2,7 +2,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse, JsonResponse
 from django.contrib.auth.models import User
-from .models import Member, PaymentDetails, CheckInOutRecord, gym_reminder
+from .models import Member, PaymentDetails, CheckInOutRecord, gym_reminder, Freeze_member
 from django.contrib import messages
 from django.db.models import Sum, Count
 from django.views.decorators.http import require_http_methods
@@ -40,7 +40,7 @@ def custom_authenticate(request):
                 if auth_user is not None:
                     login(request, auth_user)
                     # messages.success(request, 'Successfully logged in!')
-                    return redirect('New member')  
+                    return redirect('Dashboards')  
                 else:
                     messages.error(request, 'Authentication failed.')
             else:
@@ -55,8 +55,102 @@ def custom_authenticate(request):
     # If not a POST request, just render the login page
     return render(request, 'index.html')
 
+from django.shortcuts import render
+from django.utils import timezone
+from django.db.models import Count, Q
+from datetime import timedelta
+from .models import Member, CheckInOutRecord, PaymentDetails, Freeze_member
+
 def dashboard(request):
-    return HttpResponse("System dashboard")
+    today = timezone.now().date()
+    thirty_days_ago = today - timedelta(days=30)
+    two_weeks_ago = today - timedelta(days=14)
+
+    # All Members count
+    all_members = Member.objects.count()
+    new_members_last_month = Member.objects.filter(
+        date_joined__date__gte=thirty_days_ago
+    ).count()
+
+    # Active Members (not frozen and is_active)
+    active_members = Member.objects.filter(
+        is_active=True,
+        is_frozen=False
+    ).count()
+    
+    # New members this month
+    new_members = Member.objects.filter(
+        date_joined__date__gte=thirty_days_ago
+    ).count()
+    new_members_prev_month = Member.objects.filter(
+        date_joined__date__gte=thirty_days_ago - timedelta(days=30),
+        date_joined__date__lt=thirty_days_ago
+    ).count()
+    new_members_change = new_members - new_members_prev_month
+
+    # Active Check-ins today
+    active_checkins = CheckInOutRecord.objects.filter(
+        action='check_in',
+        timestamp__date=today
+    ).count()
+
+    # Expired Members (those whose last payment was more than their plan period)
+    monthly_expiry = today - timedelta(days=30)
+    quarterly_expiry = today - timedelta(days=90)
+    yearly_expiry = today - timedelta(days=365)
+
+    # Modified expired members query to avoid union+distinct issue
+    expired_members = Member.objects.filter(
+        Q(payments__plan='monthly', payments__payment_date__lt=monthly_expiry) |
+        Q(payments__plan='quarterly', payments__payment_date__lt=quarterly_expiry) |
+        Q(payments__plan='yearly', payments__payment_date__lt=yearly_expiry)
+    ).distinct().count()
+
+    # Frozen Members
+    frozen_members = Member.objects.filter(is_frozen=True).count()
+
+    # Not Attending (no check-ins in last 2 weeks)
+    attending_member_ids = CheckInOutRecord.objects.filter(
+        action='check_in',
+        timestamp__date__gte=two_weeks_ago
+    ).values_list('member_id', flat=True).distinct()
+    
+    not_attending = Member.objects.exclude(
+        id__in=attending_member_ids
+    ).filter(is_active=True).count()
+
+    context = {
+        'all_members': {
+            'value': all_members,
+            'change': f'+{new_members_last_month} this month'
+        },
+        'active_members': {
+            'value': active_members,
+            'change': f'+{new_members_last_month} this month'
+        },
+        'new_members': {
+            'value': new_members,
+            'change': f'+{new_members_change} from last month'
+        },
+        'active_checkins': {
+            'value': active_checkins,
+            'change': 'Today'
+        },
+        'expired_members': {
+            'value': expired_members,
+            'change': 'Action needed'
+        },
+        'frozen_members': {
+            'value': frozen_members,
+            'change': 'On temporary hold'
+        },
+        'not_attending': {
+            'value': not_attending,
+            'change': '2 weeks inactive'
+        }
+    }
+
+    return render(request, 'dashboard.html', context)
 
 def newmember(request):
     return render(request, 'newmember.html')
@@ -176,6 +270,7 @@ def calculate_expiry_date(payment_date, plan):
         return payment_date + timedelta(days=365)
     elif plan == 'student':
         return payment_date + timedelta(days=30)  
+    
     return None
 
 def member_details(request, member_id):
@@ -243,8 +338,7 @@ def member_details(request, member_id):
 def checkin(request):
 
     # Get recent check-in/out records (last 10)
-    recent_records = CheckInOutRecord.objects.select_related('member').all()[:10]
-    print(recent_records)
+    recent_records = CheckInOutRecord.objects.select_related('member').all()[:20]
     return render(request,"Checkin.html",{'recent_records': recent_records })
     
 
@@ -252,7 +346,7 @@ def checkin(request):
 @require_http_methods(["POST"])
 def check_in_out(request):
     """
-    Handle check-in and check-out actions via AJAX
+    Handle check-in and check-out actions via AJAX with member status validation
     """
     try:
         # Get member ID from request
@@ -266,11 +360,55 @@ def check_in_out(request):
                 'message': 'Please enter a Member ID'
             }, status=400)
 
-        # Find or create member
-        member, created = Member.objects.get_or_create(
-            phone_number=member_id,
-            defaults={'name': f'Member {member_id}'}
-        )
+        # Try to get the member
+        try:
+            member = Member.objects.get(phone_number=member_id)
+            
+            # Check if member is frozen
+            if member.is_frozen:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'This membership is currently frozen. Please contact staff.'
+                }, status=400)
+            
+            # Check if member is inactive
+            if not member.is_active:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'This membership is inactive. Please renew your membership.'
+                }, status=400)
+            
+            # Check membership expiry
+            latest_payment = PaymentDetails.objects.filter(member=member).order_by('-payment_date').first()
+            
+            if latest_payment:
+                # Calculate expiry based on plan
+                if latest_payment.plan == 'monthly':
+                    expiry_date = latest_payment.payment_date + timedelta(days=30)
+                elif latest_payment.plan == 'quarterly':
+                    expiry_date = latest_payment.payment_date + timedelta(days=90)
+                elif latest_payment.plan == 'yearly':
+                    expiry_date = latest_payment.payment_date + timedelta(days=365)
+                else:  # student package
+                    expiry_date = latest_payment.payment_date + timedelta(days=30)
+                
+                # Check if membership has expired
+                if timezone.now().date() > expiry_date:
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': 'Your membership has expired. Please renew to continue.'
+                    }, status=400)
+            else:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'No active membership found. Please make a payment.'
+                }, status=400)
+
+        except Member.DoesNotExist:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Member not found. Please check the phone number.'
+            }, status=404)
 
         # Create check-in/out record
         record = CheckInOutRecord.objects.create(
@@ -280,7 +418,7 @@ def check_in_out(request):
 
         return JsonResponse({
             'status': 'success', 
-            'message': f'Member {member} {action.lower()} successfull!',
+            'message': f'Member {member} {action.lower()}ed successfully!',
             'record': {
                 'member_id': member.id,
                 'action': record.get_action_display(),
@@ -296,20 +434,19 @@ def check_in_out(request):
 
 def get_member_history(request):
     """
-    Retrieve member check-in/out history
+    Retrieve member check-in/out history. If no member ID is provided,
+    return all recent records.
     """
     member_id = request.GET.get('id', '').strip()
     
-    if not member_id:
-        return JsonResponse({
-            'status': 'error', 
-            'message': 'Member ID is required'
-        }, status=400)
-
     try:
-        member = Member.objects.get(phone_number=member_id)
-        records = member.CheckinOut.all()
-        
+        if member_id:
+            # Get specific member's records
+            member = Member.objects.get(phone_number=member_id)
+            records = member.CheckinOut.all().order_by('-timestamp')
+        else:
+            # Get all records
+            records = CheckInOutRecord.objects.all().order_by('-timestamp')
         
         # Pagination
         page_number = request.GET.get('page', 1)
@@ -320,6 +457,7 @@ def get_member_history(request):
             'status': 'success',
             'records': [
                 {
+                    'member': str(record.member),
                     'action': record.get_action_display(),
                     'timestamp': record.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
                 } for record in page_obj
@@ -333,7 +471,11 @@ def get_member_history(request):
             'status': 'error', 
             'message': 'Member not found'
         }, status=404)
-    
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': str(e)
+        }, status=500)
 
 
 def finance(request):
@@ -485,13 +627,20 @@ def freeze_member(request,member_id):
     
     if request.method == "POST":
         freeze_time = request.POST.get('freezeTime')
-        print(freeze_time)
         member = get_object_or_404(Member, id=member_id)
+        
         
         # Freeze the membership
         member.is_frozen = True
-        # member.freeze_days = freeze_days
+        # member.is_active = False
         member.save()
+        
+        # Add member to freeze model
+        Freeze_member.objects.create(
+            member = member,
+            freeze_time = freeze_time,
+        )
+        
         messages.success(request, f'Membership for {member} has been frozen for days.')
         return redirect('Members')
     

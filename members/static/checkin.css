@@ -5,6 +5,7 @@
     --text-color: #333;
     --background-color: #F8F8F8;
     --sidebar-width: 250px;
+    --topbar-height: 60px;
 }
 
 * {
@@ -16,49 +17,45 @@
 
 body {
     background-color: var(--background-color);
-    display: flex;
-    justify-content: center; /* Center horizontally */
-    align-items: center;     /* Center vertically */
     min-height: 100vh;
 }
 
-.content-wrapper {
-    width: 100%; /* Full width to center content within */
+.topbar {
+    position: fixed;
+    top: 30px;
+    left: 0;
+    right: 0;
+    height: var(--topbar-height);
+    background-color: var(--primary-pink);
+    color: white;
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
 }
 
-.main-content {
-    width: 100%;  /* Ensure full width for centering */
-    display: flex;
-    justify-content: center; /* Center the container within main-content */
-    align-items: center;     /* Not strictly necessary if content-wrapper does not have height */
-    padding: 20px;
+.topbar h1 {
+    font-size: 1.5rem;
+    color: white;
 }
 
 .container {
-    background-color: white;
-    border-radius: 12px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    width: 100%;
-    max-width: 500px;
-    padding: 30px;
-    /* Center all content within container */
     display: flex;
     flex-direction: column;
     align-items: center;
+    padding: 20px;
+    max-width: 800px;
+    margin: calc(var(--topbar-height) + 20px) auto 0 auto;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.logo {
-    width: 100px;
-    height: 100px;
-    background-color: var(--primary-pink);
-    border-radius: 50%;
-    margin-bottom: 20px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    color: white;
-    font-size: 24px;
-    font-weight: bold;
+.main-content {
+    width: 100%;
+    max-width: 600px;
+    margin: 0 auto;
 }
 
 .member-input {
@@ -76,8 +73,20 @@ body {
     border-color: var(--primary-pink);
 }
 
-.check-in-btn, .check-out-btn {
+.member-input.error {
+    border-color: #ff4444;
+    background-color: #fff8f8;
+}
+
+.btn-group {
     width: 100%;
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.check-in-btn, .check-out-btn {
+    flex: 1;
     padding: 12px;
     border: none;
     border-radius: 8px;
@@ -87,17 +96,10 @@ body {
     font-weight: bold;
     cursor: pointer;
     transition: background-color 0.3s ease;
-    margin-bottom: 15px;
 }
 
 .check-in-btn:hover, .check-out-btn:hover {
     background-color: var(--dark-pink);
-}
-
-.btn-group {
-    width: 100%;
-    display: flex;
-    gap: 10px;
 }
 
 .status-message {
@@ -106,6 +108,7 @@ body {
     border-radius: 8px;
     font-weight: bold;
     width: 100%;
+    text-align: center;
 }
 
 .status-success {
@@ -118,10 +121,16 @@ body {
     color: #6a2d2d;
 }
 
-/* History Table Styles */
 .history-section {
-    margin-top: 20px;
     width: 100%;
+    margin-top: 20px;
+    overflow-x: auto;
+}
+
+.history-section h3 {
+    margin-bottom: 15px;
+    color: var(--text-color);
+    text-align: center;
 }
 
 .history-table {
@@ -147,15 +156,16 @@ body {
 
 /* Responsive Adjustments */
 @media (max-width: 768px) {
-    body {
-        flex-direction: column;
-    }
-
-    .sidebar {
-        width: 100%;
-    }
-
     .container {
-        max-width: 100%;
+        margin: calc(var(--topbar-height) + 10px) 10px 10px 10px;
+        padding: 15px;
+    }
+
+    .main-content {
+        padding: 0;
+    }
+    
+    .history-table {
+        font-size: 14px;
     }
 }

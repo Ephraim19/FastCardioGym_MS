@@ -82,3 +82,10 @@ class gym_reminder(models.Model):
     
     def __str__(self):
         return f"{self.member} - {self.reminder_date}"
+    
+    
+class Freeze_member(models.Model):
+    member = models.ForeignKey(Member,on_delete=models.CASCADE,related_name='frozen')
+    freeze_time = models.IntegerField()
+    frozen_date = models.DateField(auto_now_add=True)
+    

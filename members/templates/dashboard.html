@@ -1,113 +1,64 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>FastCardio</title>
-  {% load static %}
-  <link rel="stylesheet" href="{% static 'dashboard.css' %}">
-</head>
-<body>
-  <div class="container">
-    <div class="sidebar">
-      <div class="sidebar-header">
-        <h1>FastCardio</h1>
-        <button class="collapse-btn">
-          <span class="collapse-icon"></span>
-        </button>
-      </div>
-      <nav class="sidebar-nav">
-        <ul>
-          <li><a href="#">Dashboard</a></li>
-          <li><a href="#">Appointments</a></li>
-          <li><a href="#">Customers</a></li>
-          <li><a href="#">Financials</a></li>
-          <li><a href="#">Reports</a></li>
-          <li><a href="#">Settings</a></li>
-        </ul>
-      </nav>
+{% extends 'sidebar.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Overview{% endblock %}
+
+{% block extra_styles %}
+    <link rel="stylesheet" href="{% static 'dashboard.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <div class="header">
+        <h1>FastCardio Dashboard</h1>
+        <p>Membership Overview</p>
     </div>
-    <div class="main-content">
-      <div class="stats-container">
-        <div class="stats-item">
-          <h2>Total Clients</h2>
-          <p>124</p>
-          <div class="stats-indicator">4%</div>
+    
+    <div class="grid">
+        <div class="card">
+            <div class="card-title">All Members</div>
+            <div class="card-value">{{ all_members.value|default:0|intcomma }}</div>
+            <div class="card-change positive">{{ all_members.change|default:"No change" }}</div>
         </div>
-        <div class="stats-item">
-          <h2>Members</h2>
-          <p>65</p>
-          <div class="stats-indicator">12%</div>
-          <div class="stats-indicator">13%</div>
-          <div class="stats-indicator">40%</div>
+
+        <div class="card">
+            <div class="card-title">Active Members</div>
+            <div class="card-value">{{ active_members.value|default:0|intcomma }}</div>
+            <div class="card-change positive">{{ active_members.change|default:"No change" }}</div>
         </div>
-        <div class="stats-item">
-          <h2>New/Returning</h2>
-          <p>3/23</p>
+        
+        <div class="card">
+            <div class="card-title">New Members</div>
+            <div class="card-value">{{ new_members.value|default:0 }}</div>
+            <div class="card-change {% if new_members.value > 0 %}positive{% else %}negative{% endif %}">
+                {{ new_members.change|default:"No new members" }}
+            </div>
         </div>
-      </div>
-      <div class="customer-table">
-        <h2>All customers</h2>
-        <div class="table-header">
-          <input type="text" placeholder="Quick Search" />
-          <button>All members</button>
+        
+        <div class="card">
+            <div class="card-title">Active Check-ins</div>
+            <div class="card-value">{{ active_checkins.value|default:0 }}</div>
+            <div class="card-change">{{ active_checkins.change|default:"No check-ins today" }}</div>
         </div>
-        <table>
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Last Visit</th>
-              <th>Age</th>
-              <th>Gender</th>
-              <th>Membership</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>
-                <img src="profile-pic.jpg" alt="Profile Picture">
-                Johani Watson
-              </td>
-              <td>Sep 20, 2019</td>
-              <td>31</td>
-              <td>Female</td>
-              <td>Golden</td>
-            </tr>
-            <tr>
-              <td>
-                <img src="profile-pic.jpg" alt="Profile Picture">
-                Bernard Pena
-              </td>
-              <td>Sep 20, 2019</td>
-              <td>66</td>
-              <td>Unknown</td>
-              <td>None</td>
-            </tr>
-            <tr>
-              <td>
-                <img src="profile-pic.jpg" alt="Profile Picture">
-                Brandon Stewart
-              </td>
-              <td>Sep 20, 2019</td>
-              <td>33</td>
-              <td>Male</td>
-              <td>Basic</td>
-            </tr>
-            <tr>
-              <td>
-                <img src="profile-pic.jpg" alt="Profile Picture">
-                Ricardo Webb
-              </td>
-              <td>Sep 20, 2019</td>
-              <td>43</td>
-              <td>Male</td>
-              <td>Silver</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+        
+        <div class="card">
+            <div class="card-title">Expired Members</div>
+            <div class="card-value">{{ expired_members.value|default:0 }}</div>
+            <div class="card-change negative">{{ expired_members.change|default:"No expired memberships" }}</div>
+        </div>
+        
+        <div class="card">
+            <div class="card-title">Frozen Members</div>
+            <div class="card-value">{{ frozen_members.value|default:0 }}</div>
+            <div class="card-change">{{ frozen_members.change|default:"No frozen members" }}</div>
+        </div>
+        
+        <div class="card">
+            <div class="card-title">Not Attending</div>
+            <div class="card-value">{{ not_attending.value|default:0 }}</div>
+            <div class="card-change negative">{{ not_attending.change|default:"All members active" }}</div>
+        </div>
     </div>
-  </div>
-  <script src="{% static 'script.js' %}"></script>
-</body>
-</html>
+</div>
+{% endblock %}

@@ -10,12 +10,13 @@ document.addEventListener('DOMContentLoaded', () => {
         statusMessage.style.display = 'block';
         statusMessage.className = `status-message ${isSuccess ? 'status-success' : 'status-error'}`;
         
+        const timeout = isSuccess ? 5000 : 8000;
         setTimeout(() => {
             statusMessage.style.display = 'none';
-        }, 5000);
+        }, timeout);
     }
 
-    function handleCheckInOut(action) {
+    async function handleCheckInOut(action) {
         const memberId = memberIdInput.value.trim();
         
         if (!memberId) {
@@ -23,41 +24,43 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        fetch('check-in-out/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'X-CSRFToken': getCookie('csrftoken')
-            },
-            body: `id=${encodeURIComponent(memberId)}&action=${encodeURIComponent(action)}`
-        })
-        .then(response => response.json())
-        .then(data => {
+        try {
+            const response = await fetch('check-in-out/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: `id=${encodeURIComponent(memberId)}&action=${encodeURIComponent(action)}`
+            });
+
+            const data = await response.json();
+
             if (data.status === 'success') {
                 showStatus(data.message, true);
                 updateMemberHistory(memberId);
-                memberIdInput.value = ''; // Clear input after successful check-in/out
             } else {
-                showStatus(data.message, false);
-                console.log(data.message);
+                showStatus(data.message || 'An error occurred', false);
+                if (response.status === 404) {
+                    memberIdInput.classList.add('error');
+                    setTimeout(() => memberIdInput.classList.remove('error'), 3000);
+                }
             }
-        })
-        .catch(error => {
-            showStatus('An error occurred', false);
+        } catch (error) {
+            showStatus('An error occurred while processing your request', false);
             console.error('Error:', error);
-        });
+        }
     }
 
-    function updateMemberHistory(memberId) {
-        // Check if memberId is empty or contains only whitespace
-        const shouldShowAllRecords = !memberId || memberId.trim() === '' || memberId === '0';
-        const url = shouldShowAllRecords 
+    async function updateMemberHistory(memberId) {
+        const url = (!memberId || memberId.trim() === '') 
             ? 'member-history/' 
             : `member-history/?id=${encodeURIComponent(memberId)}`;
-        
-        fetch(url)
-        .then(response => response.json())
-        .then(data => {
+
+        try {
+            const response = await fetch(url);
+            const data = await response.json();
+
             if (data.status === 'success') {
                 historyTableBody.innerHTML = '';
                 
@@ -70,18 +73,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     `;
                     historyTableBody.appendChild(row);
                 });
-
-                if (shouldShowAllRecords) {
-                    showStatus('Showing all check-in and check-out records', true);
-                }
-            } else {
-                showStatus('Error loading history records', false);
             }
-        })
-        .catch(error => {
+        } catch (error) {
             console.error('Error fetching history:', error);
-            showStatus('Error loading history records', false);
-        });
+        }
     }
 
     function getCookie(name) {
@@ -104,26 +99,12 @@ document.addEventListener('DOMContentLoaded', () => {
     checkOutBtn.addEventListener('click', () => handleCheckInOut('Check Out'));
 
     // Add event listener for changes in the memberIdInput field
-    let timeoutId;
     memberIdInput.addEventListener('input', (event) => {
-        // Clear the previous timeout
-        if (timeoutId) {
-            clearTimeout(timeoutId);
-        }
-
-        // Set a new timeout to update history after user stops typing
-        timeoutId = setTimeout(() => {
-            const memberId = event.target.value.trim();
-            if (!memberId || memberId === '0') {
-                updateMemberHistory(null);
-            } else {
-                updateMemberHistory(memberId);
-            }
-        }, 500); // Wait 500ms after user stops typing
+        const memberId = event.target.value.trim();
+        memberIdInput.classList.remove('error');
+        updateMemberHistory(memberId);
     });
 
-    // Load initial records only if input is empty
-    if (!memberIdInput.value.trim()) {
-        updateMemberHistory(null);
-    }
+    // Load initial records silently
+    updateMemberHistory('');
 });
