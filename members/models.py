@@ -19,9 +19,11 @@ class Member(models.Model):
 class PaymentDetails(models.Model):
     # Payment plan options
     PLAN_CHOICES = [
+        ('daily', 'Daily'),
         ('monthly', 'Monthly'),
         ('quarterly', 'Quarterly'),
-        ('yearly', 'Yearly'),
+        ('biannually', 'Biannually'),
+        ('annually', 'Annually'),
         ('student', 'Student Package'),
     ]
     

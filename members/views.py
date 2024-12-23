@@ -64,7 +64,7 @@ from .models import Member, CheckInOutRecord, PaymentDetails, Freeze_member
 def dashboard(request):
     today = timezone.now().date()
     thirty_days_ago = today - timedelta(days=30)
-    two_weeks_ago = today - timedelta(days=14)
+    one_weeks_ago = today - timedelta(days=7)
 
     # All Members count
     all_members = Member.objects.count()
@@ -95,15 +95,21 @@ def dashboard(request):
     ).count()
 
     # Expired Members (those whose last payment was more than their plan period)
+    daily_expiry = today - timedelta(days=1)
     monthly_expiry = today - timedelta(days=30)
     quarterly_expiry = today - timedelta(days=90)
+    biannual_expiry = today - timedelta(days=182)
     yearly_expiry = today - timedelta(days=365)
+    student_expiry = today - timedelta(days=30)
 
-    # Modified expired members query to avoid union+distinct issue
+    # Expired members query
     expired_members = Member.objects.filter(
+        Q(payments__plan='daily', payments__payment_date__lt=daily_expiry) |
         Q(payments__plan='monthly', payments__payment_date__lt=monthly_expiry) |
         Q(payments__plan='quarterly', payments__payment_date__lt=quarterly_expiry) |
-        Q(payments__plan='yearly', payments__payment_date__lt=yearly_expiry)
+        Q(payments__plan='biannually', payments__payment_date__lt=biannual_expiry) |
+        Q(payments__plan='annually', payments__payment_date__lt=yearly_expiry) |
+        Q(payments__plan='student', payments__payment_date__lt=student_expiry)
     ).distinct().count()
 
     # Frozen Members
@@ -112,7 +118,7 @@ def dashboard(request):
     # Not Attending (no check-ins in last 2 weeks)
     attending_member_ids = CheckInOutRecord.objects.filter(
         action='check_in',
-        timestamp__date__gte=two_weeks_ago
+        timestamp__date__gte=one_weeks_ago
     ).values_list('member_id', flat=True).distinct()
     
     not_attending = Member.objects.exclude(
@@ -146,7 +152,7 @@ def dashboard(request):
         },
         'not_attending': {
             'value': not_attending,
-            'change': '2 weeks inactive'
+            'change': '1 weeks inactive'
         }
     }
 
@@ -225,8 +231,28 @@ def save_payment(request, member_id=None):
     # Render payment form with member context
     return render(request, 'payment.html', {'member': member})
 
-def members(request):
+from django.shortcuts import render
+from django.db.models import Sum
+from django.utils import timezone
+from datetime import timedelta
+from .models import Member, PaymentDetails
 
+def calculate_expiry_date(payment_date, plan):
+    if not payment_date:
+        return None
+    
+    expiry_periods = {
+        'daily': timedelta(days=1),
+        'monthly': timedelta(days=30),
+        'quarterly': timedelta(days=90),
+        'biannually': timedelta(days=180),
+        'annually': timedelta(days=365),
+        'student': timedelta(days=30),  # Assuming student package is monthly
+    }
+    
+    return payment_date + expiry_periods.get(plan, timedelta(0))
+
+def members(request):
     # Retrieve members with their total payments
     members_with_payments = []
     
@@ -239,6 +265,25 @@ def members(request):
         
         # Get the latest payment details
         latest_payment = payments.order_by('-payment_date').first()
+        
+        # Calculate expiry date
+        expiry_date = None
+        membership_status = 'Expired'
+        
+        if latest_payment:
+            expiry_date = calculate_expiry_date(latest_payment.payment_date, latest_payment.plan)
+            
+            if expiry_date:
+                today = timezone.now().date()
+                days_until_expiry = (expiry_date - today).days
+                
+                if days_until_expiry > 7:
+                    membership_status = 'Active'
+                elif days_until_expiry > 0:
+                    membership_status = 'Expiring Soon'
+                else:
+                    membership_status = 'Expired'
+        
         # Prepare member data
         member_data = {
             'id': member.id,
@@ -251,22 +296,31 @@ def members(request):
             'total_amount_paid': total_amount_paid,
             'latest_plan': latest_payment.plan if latest_payment else 'No Plan',
             'latest_payment_date': latest_payment.payment_date if latest_payment else None,
+            'expiry_date': expiry_date,
+            'membership_status': membership_status,
+            'days_until_expiry': (expiry_date - timezone.now().date()).days if expiry_date else None
         }
         
         members_with_payments.append(member_data)
-        members_with_payments.reverse()
+    
+    members_with_payments.reverse()
     
     return render(request, 'allmembers.html', {
-        'members': members_with_payments
+        'members': members_with_payments,
+        'today': timezone.now().date()
     })
     
 
 def calculate_expiry_date(payment_date, plan):
-    if plan == 'monthly':
+    if plan == 'daily':
+        return payment_date + timedelta(days=1)
+    elif plan == 'monthly':
         return payment_date + timedelta(days=30)
     elif plan == 'quarterly':
         return payment_date + timedelta(days=90)
-    elif plan == 'yearly':
+    elif plan == 'biannually':
+        return payment_date + timedelta(days=182)
+    elif plan == 'annually':
         return payment_date + timedelta(days=365)
     elif plan == 'student':
         return payment_date + timedelta(days=30)  
@@ -383,11 +437,15 @@ def check_in_out(request):
             
             if latest_payment:
                 # Calculate expiry based on plan
-                if latest_payment.plan == 'monthly':
+                if latest_payment.plan == 'daily':
+                    expiry_date = latest_payment.payment_date + timedelta(days=1)
+                elif latest_payment.plan == 'monthly':
                     expiry_date = latest_payment.payment_date + timedelta(days=30)
                 elif latest_payment.plan == 'quarterly':
                     expiry_date = latest_payment.payment_date + timedelta(days=90)
-                elif latest_payment.plan == 'yearly':
+                elif latest_payment.plan == 'biannually':
+                    expiry_date = latest_payment.payment_date + timedelta(days=182)
+                elif latest_payment.plan == 'annually':
                     expiry_date = latest_payment.payment_date + timedelta(days=365)
                 else:  # student package
                     expiry_date = latest_payment.payment_date + timedelta(days=30)
@@ -525,7 +583,6 @@ class RevenueAndMembershipView(View):
                 for membership in membership_types
             ]
         }
-        print(response_data)
         return JsonResponse(response_data)
 
 def all_reminders(request):
@@ -564,11 +621,15 @@ def all_reminders(request):
         # Check for subscription reminder
         if member_payment:
             # Calculate expiry date based on payment plan
-            if member_payment.plan == 'monthly':
+            if member_payment.plan == 'daily':
+                expiry_date = member_payment.payment_date + timedelta(days=1)
+            elif member_payment.plan == 'monthly':
                 expiry_date = member_payment.payment_date + timedelta(days=30)
             elif member_payment.plan == 'quarterly':
                 expiry_date = member_payment.payment_date + timedelta(days=90)
-            elif member_payment.plan == 'yearly':
+            elif member_payment.plan == 'biannually':
+                expiry_date = member_payment.payment_date + timedelta(days=182)
+            elif member_payment.plan == 'annually':
                 expiry_date = member_payment.payment_date + timedelta(days=365)
             else:  # student package
                 expiry_date = member_payment.payment_date + timedelta(days=30)

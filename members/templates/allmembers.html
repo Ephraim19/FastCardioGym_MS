@@ -50,7 +50,7 @@
                 <tr>
                     <th>Name</th>
                     <th>Phone</th>
-                    <th>Date Joined</th>
+                    <th>Joined / Expiry Date</th>
                     <th>Plan</th>
                     <th>Profile</th>
                 </tr>
@@ -60,7 +60,7 @@
                 <tr>
                     <td>{{ member.full_name }}</td>
                     <td>{{ member.phone_number }}</td>
-                    <td>{{ member.date_joined|date:"Y-m-d" }}</td>
+                    <td>{{ member.date_joined|date:"F d, Y" }} / {{ member.expiry_date|date:"F d, Y" }} </td>
 
                     <td>{{ member.latest_plan }}</td>
                     <td><a style="text-decoration: none; color: #FF69B4;" href="{% url 'Member details' member.id %}">View</a>

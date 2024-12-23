@@ -9,25 +9,33 @@ document.addEventListener('DOMContentLoaded', function () {
             valueElem: document.querySelector('.finance-card:nth-child(1) .card-value'),
             detailElem: document.querySelector('.finance-card:nth-child(1) p')
         },
-        monthlySubs: {
+        dailySubs: {
             valueElem: document.querySelector('.finance-card:nth-child(2) .card-value'),
             detailElem: document.querySelector('.finance-card:nth-child(2) p')
         },
-        quarterlySubs: {
+        monthlySubs: {
             valueElem: document.querySelector('.finance-card:nth-child(3) .card-value'),
             detailElem: document.querySelector('.finance-card:nth-child(3) p')
         },
-        yearlySubs: {
+        quarterlySubs: {
             valueElem: document.querySelector('.finance-card:nth-child(4) .card-value'),
             detailElem: document.querySelector('.finance-card:nth-child(4) p')
         },
-        studentSubs: {
+        biannuallySubs: {
             valueElem: document.querySelector('.finance-card:nth-child(5) .card-value'),
             detailElem: document.querySelector('.finance-card:nth-child(5) p')
         },
-        additionalServices: {
+        annuallySubs: {
             valueElem: document.querySelector('.finance-card:nth-child(6) .card-value'),
             detailElem: document.querySelector('.finance-card:nth-child(6) p')
+        },
+        studentSubs: {
+            valueElem: document.querySelector('.finance-card:nth-child(7) .card-value'),
+            detailElem: document.querySelector('.finance-card:nth-child(7) p')
+        },
+        additionalServices: {
+            valueElem: document.querySelector('.finance-card:nth-child(8) .card-value'),
+            detailElem: document.querySelector('.finance-card:nth-child(8) p')
         }
     };
 
@@ -46,7 +54,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 return response.json();
             })
             .then(data => {
-                console.log('Revenue Data:', data); // Log to check the returned data
+                console.log('Revenue Data:', data);
 
                 // Ensure all subscription cards are reset first
                 Object.keys(subscriptionCards).forEach(key => {
@@ -63,9 +71,11 @@ document.addEventListener('DOMContentLoaded', function () {
                     
                     // Explicitly map and update each subscription type
                     const subscriptionMap = {
+                        'daily': 'dailySubs',
                         'monthly': 'monthlySubs',
                         'quarterly': 'quarterlySubs',
-                        'yearly': 'yearlySubs',
+                        'biannually': 'biannuallySubs',
+                        'annually': 'annuallySubs',
                         'student': 'studentSubs'
                     };
 
