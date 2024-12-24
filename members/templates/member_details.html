@@ -2,7 +2,7 @@
 {% extends 'sidebar.html' %}
 {% load static %}
 
-{% block title %}Member profile{% endblock %}
+{% block title %}Fastcardio - Member profile{% endblock %}
 
 {% block extra_styles %}
     <link rel="stylesheet" href="{% static 'member_details.css' %}">
@@ -12,13 +12,16 @@
     <div class="container">
         <div class="profile-header">
             <div class="profile-header-left">
-                <h1>{{ member.first_name }} {{ member.last_name }}</h1>
-                <span class="status-badge status-{{ membership_status|lower }}">{{ membership_status }}</span>
+                <h1>{{ member.first_name }} {{ member.last_name }} - <span style="font-size: 18px;" class="status-badge status-{{ membership_status|lower }}">{{ membership_status }}</span> </h1>
+                
                 <a href="{% url 'Payment' member_id=member.id %}">
                     <span class="status-badge status-{{ membership_status|lower }}">New Payment</span>
-                </a>
+                </a> 
                 <a href="{% url 'freeze' member_id=member.id %}">
-                    <span class="status-badge status-{{ membership_status|lower }}">Freeze: {{ member.is_frozen }}</span>
+                    <span class="status-badge status-{{ membership_status|lower }}">Freeze</span>
+                </a>
+                <a href="{% url 'member_progress' member_id=member.id %}">
+                    <span class="status-badge status-{{ membership_status|lower }}">Progress</span>
                 </a>
             </div>
             <div class="profile-header-right">

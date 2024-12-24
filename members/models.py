@@ -1,6 +1,6 @@
 from django.db import models
 from django.utils import timezone
-# Create your models here.
+from django.core.validators import MinValueValidator
 
 class Member(models.Model):
     first_name = models.CharField(max_length=50)
@@ -102,3 +102,50 @@ class Expense(models.Model):
     
     def __str__(self):
         return f"{self.expense_type}-{self.amount} 0n {self.date}"
+    
+class MemberProgress(models.Model):
+    member = models.ForeignKey('Member', on_delete=models.CASCADE, related_name='progress')
+    date = models.DateField(auto_now_add=True)
+    weight = models.DecimalField(
+        max_digits=5, 
+        decimal_places=2,
+        validators=[MinValueValidator(0)]
+    )
+    body_fat = models.DecimalField(
+        max_digits=4, 
+        decimal_places=1,
+        validators=[MinValueValidator(0)],
+        null=True,
+        blank=True
+    )
+    muscle_mass = models.DecimalField(
+        max_digits=5, 
+        decimal_places=2,
+        validators=[MinValueValidator(0)],
+        null=True,
+        blank=True
+    )
+    chest = models.DecimalField(
+        max_digits=5, 
+        decimal_places=2,
+        validators=[MinValueValidator(0)],
+        null=True,
+        blank=True
+    )
+    waist = models.DecimalField(
+        max_digits=5, 
+        decimal_places=2,
+        validators=[MinValueValidator(0)],
+        null=True,
+        blank=True
+    )
+    notes = models.TextField(blank=True, null=True)
+
+    class Meta:
+        ordering = ['-date']
+        verbose_name = "Member Progress"
+        verbose_name_plural = "Member Progress Records"
+
+    def __str__(self):
+        return f"{self.member} - Progress on {self.date}"
+    

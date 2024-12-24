@@ -1,0 +1,93 @@
+{% extends 'sidebar.html' %}
+{% load static %}
+
+{% block title %}Fastcardio - Progress{% endblock %}
+
+{% block extra_styles %}
+    <link rel="stylesheet" href="{% static 'member_progress.css' %}">
+{% endblock %}
+
+{% block content %}
+    <div class="dashboard">
+        
+    <div class="header">
+        <div class="logo">{{ member.first_name }}'s Progress</div>
+        <button type="button" onclick="toggleDataEntry()">Add New Data</button>
+    </div>
+
+        <div class="member-info">
+            <div class="info-card">
+                <h3>Current Weight</h3>
+                <p>{{ latest_progress.weight|default:"--" }} kg</p>
+            </div>
+            <div class="info-card">
+                <h3>Body Fat %</h3>
+                <p>{{ latest_progress.body_fat|default:"--" }}%</p>
+            </div>
+            <div class="info-card">
+                <h3>Muscle Mass</h3>
+                <p>{{ latest_progress.muscle_mass|default:"--" }} kg</p>
+            </div>
+            <div class="info-card">
+                <h3>Workouts This Month</h3>
+                <p>{{ workouts_this_month }}</p>
+            </div>
+        </div>
+
+        <div class="progress-section">
+            <div class="chart-container">
+                <h3>Weight Progress</h3>
+                <canvas id="weightChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <h3>Body Measurements</h3>
+                <canvas id="measurementsChart"></canvas>
+            </div>
+        </div>
+
+        <div id="dataEntry" class="data-entry" style="display: none;">
+            <h2>Add New Measurements</h2>
+            <form onsubmit="handleSubmit(event)" class="progress-form">
+                <input type="hidden" id="member-id" value="{{ member.id }}">
+                <div class="form-group">
+                    <label>Weight (kg)</label>
+                    <input type="number" name="weight" step="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label>Body Fat (%)</label>
+                    <input type="number" name="body_fat" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label>Muscle Mass (kg)</label>
+                    <input type="number" name="muscle_mass" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label>Chest (cm)</label>
+                    <input type="number" name="chest" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label>Waist (cm)</label>
+                    <input type="number" name="waist" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label>Notes</label>
+                    <textarea name="notes"></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="submit">Save Data</button>
+                    <button type="button" onclick="toggleDataEntry()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+<!-- Hidden data for charts -->
+<div id="chart-data" style="display: none;">
+    <div id="weight-data">{{ weight_data|safe }}</div>
+    <div id="measurements-data">{{ measurements_data|safe }}</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{% static 'js/progress.js' %}"></script>
+
+{% endblock %}

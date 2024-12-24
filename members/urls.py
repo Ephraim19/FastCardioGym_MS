@@ -27,4 +27,9 @@ urlpatterns = [
     path('reminders/all/',views.all_reminders, name = "All Reminders" ),
     
     path('expenses/',views.expenses,name="Expenses" ),
+    
+    # path('progress/<int:member_id>/',views.progress,name="Progress" ),
+    path('member/<int:member_id>/progress/', views.member_progress, name='member_progress'),
+    path('member/<int:member_id>/progress/add/', views.add_progress, name='add_progress'),
+    path('member/<int:member_id>/progress/history/', views.get_progress_history, name='progress_history')
 ]

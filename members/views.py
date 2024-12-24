@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse, JsonResponse
 from django.contrib.auth.models import User
-from .models import Member, PaymentDetails, CheckInOutRecord, gym_reminder, Freeze_member, Expense
+from .models import Member, PaymentDetails, CheckInOutRecord, gym_reminder, Freeze_member, Expense, MemberProgress
 from django.contrib import messages
 from django.db.models import Sum, Count
 from django.views.decorators.http import require_http_methods
@@ -14,6 +14,9 @@ from django.utils import timezone
 from datetime import timedelta,datetime
 from django.db.models.functions import TruncMonth
 from django.db.models import Count, Q
+from django.contrib.auth.decorators import login_required
+import json
+from decimal import Decimal
 
 def login_page(request):
     return render(request, 'index.html')
@@ -158,7 +161,6 @@ def dashboard(request):
     }
 
     return render(request, 'dashboard.html', context)
-
 def newmember(request):
     return render(request, 'newmember.html')
 
@@ -786,3 +788,115 @@ def expenses(request):
             print(e)
             messages.error(request, 'Error saving expense.')
     return render(request, 'expenses.html')
+
+
+def member_progress(request, member_id):
+    """View for displaying member progress dashboard"""
+    member = get_object_or_404(Member, id=member_id)
+    
+    # Get latest progress record
+    latest_progress = MemberProgress.objects.filter(member=member).first()
+    
+    # Calculate workouts this month
+    first_day = timezone.now().replace(day=1, hour=0, minute=0, second=0)
+    workouts_count = CheckInOutRecord.objects.filter(
+        member=member,
+        action='check_in',
+        timestamp__gte=first_day
+    ).count()
+    
+    # Get historical progress data for charts
+    progress_data = MemberProgress.objects.filter(member=member).order_by('date')
+    
+    # Prepare data for charts
+    weight_data = {
+        'labels': [p.date.strftime('%Y-%m-%d') for p in progress_data],
+        'values': [float(p.weight) for p in progress_data]
+    }
+    
+    measurements_data = {
+        'labels': [p.date.strftime('%Y-%m-%d') for p in progress_data],
+        'chest': [float(p.chest) if p.chest else None for p in progress_data],
+        'waist': [float(p.waist) if p.waist else None for p in progress_data]
+    }
+    
+    context = {
+        'member': member,
+        'latest_progress': latest_progress,
+        'workouts_this_month': workouts_count,
+        'weight_data': json.dumps(weight_data),
+        'measurements_data': json.dumps(measurements_data)
+    }
+    
+    return render(request, 'member_progress.html', context)
+
+def add_progress(request, member_id):
+    """View for adding new progress data"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Invalid request method'}, status=400)
+    
+    try:
+        member = get_object_or_404(Member, id=member_id)
+        data = json.loads(request.body)
+        print(data)
+        
+        progress = MemberProgress.objects.create(
+            member=member,
+            weight=Decimal(data.get('weight', 0)) if data.get('weight') else None,
+            body_fat=Decimal(data.get('body_fat', 0)) if data.get('body_fat') else None,
+            muscle_mass=Decimal(data.get('muscle_mass', 0)) if data.get('muscle_mass') else None,
+            chest=Decimal(data.get('chest', 0)) if data.get('chest') else None,
+            waist=Decimal(data.get('waist', 0)) if data.get('waist') else None,
+            notes=data.get('notes', '')
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'data': {
+                'id': progress.id,
+                'date': progress.date.strftime('%Y-%m-%d'),
+                'weight': float(progress.weight),
+                'body_fat': float(progress.body_fat) if progress.body_fat else None,
+                'muscle_mass': float(progress.muscle_mass) if progress.muscle_mass else None
+            }
+        })
+        
+    except (ValueError, KeyError) as e:
+        return JsonResponse({'error': str(e)}, status=400)
+
+def get_progress_history(request, member_id):
+    """API endpoint for fetching progress history"""
+    member = get_object_or_404(Member, id=member_id)
+    timeframe = request.GET.get('timeframe', 'all')  # all, year, month, week
+    
+    # Calculate date range based on timeframe
+    end_date = timezone.now()
+    if timeframe == 'year':
+        start_date = end_date - timedelta(days=365)
+    elif timeframe == 'month':
+        start_date = end_date - timedelta(days=30)
+    elif timeframe == 'week':
+        start_date = end_date - timedelta(days=7)
+    else:
+        start_date = None
+    
+    # Query progress records
+    progress_query = MemberProgress.objects.filter(member=member)
+    if start_date:
+        progress_query = progress_query.filter(date__gte=start_date)
+    
+    progress_records = progress_query.order_by('date')
+    
+    # Prepare data for response
+    data = {
+        'dates': [p.date.strftime('%Y-%m-%d') for p in progress_records],
+        'weight': [float(p.weight) for p in progress_records],
+        'body_fat': [float(p.body_fat) if p.body_fat else None for p in progress_records],
+        'muscle_mass': [float(p.muscle_mass) if p.muscle_mass else None for p in progress_records],
+        'measurements': {
+            'chest': [float(p.chest) if p.chest else None for p in progress_records],
+            'waist': [float(p.waist) if p.waist else None for p in progress_records]
+        }
+    }
+    
+    return JsonResponse(data)
