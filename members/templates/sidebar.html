@@ -31,9 +31,10 @@
                 <li><a href="{% url 'Finance' %}">Finance</a></li>
                 <li><a href="{% url 'Reminders' %}">Reminders</a></li>
                 <li><a href="{% url 'Expenses' %}">Expenses</a></li>
-                <li><a href="#">Expired</a></li>
-                <li><a href="#">Not attending</a></li>
-                <li><a href="#">Reports</a></li>
+                <li><a href="{% url 'member_status' %}">Member Statuses</a></li>
+                <!-- <li><a href="#">Expired</a></li>
+                <li><a href="#">Not attending</a></li> -->
+                <li><a href="{% url 'Reports' %}">Reports</a></li>
                 <li><a href="{% url 'login' %}">Log out</a></li>
             </ul>
         </nav>

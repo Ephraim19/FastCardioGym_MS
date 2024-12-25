@@ -1,0 +1,113 @@
+{% extends 'sidebar.html' %}
+{% load static %}
+
+{% block title %}Fastcardio - Status{% endblock %}
+
+{% block extra_styles %}
+    <link rel="stylesheet" href="{% static 'status.css' %}">
+{% endblock %}
+
+{% block content %}
+
+    <div class="dashboard-header">
+        <h1 class="dashboard-title">Member Status</h1>
+    </div>
+    <div class="stats-container">
+        <div class="stat-card">
+            <h3>Active Members</h3>
+            <div class="count">{{ stats.total_active }}</div>
+        </div>
+        <div class="stat-card">
+            <h3>Inactive Members</h3>
+            <div class="count">{{ stats.total_inactive }}</div>
+        </div>
+        <div class="stat-card">
+            <h3>Expired Members</h3>
+            <div class="count">{{ stats.total_expired }}</div>
+        </div>
+    </div>
+
+    <div class="tabs">
+        <button class="tab-button active" onclick="openTab(event, 'active')">Active</button>
+        <button class="tab-button" onclick="openTab(event, 'inactive')">Inactive</button>
+        <button class="tab-button" onclick="openTab(event, 'expired')">Expired</button>
+    </div>
+
+    <div id="active" class="tab-content active">
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Phone</th>
+                    <th>Plan</th>
+                    <!-- <th>Last Payment</th> -->
+                    <th>Expiry Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for member in active_members %}
+                <tr>
+                    <td>{{ member.name }}</td>
+                    <td>{{ member.phone }}</td>
+                    <td>{{ member.plan }}</td>
+                    <!-- <td>{{ member.last_payment }}</td> -->
+                    <td>{{ member.expiry_date }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div id="inactive" class="tab-content">
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Phone</th>
+                    <th>Plan</th>
+                    <!-- <th>Last Payment</th> -->
+                    <th>Expiry Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for member in inactive_members %}
+                <tr>
+                    <td>{{ member.name }}</td>
+                    <td>{{ member.phone }}</td>
+                    <td>{{ member.plan }}</td>
+                    <!-- <td>{{ member.last_payment }}</td> -->
+                    <td>{{ member.expiry_date }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div id="expired" class="tab-content">
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Phone</th>
+                    <th>Plan</th>
+                    <!-- <th>Last Payment</th> -->
+                    <th>Expiry Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for member in expired_members %}
+                <tr>
+                    <td>{{ member.name }}</td>
+                    <td>{{ member.phone }}</td>
+                    <td>{{ member.plan }}</td>
+                    <!-- <td>{{ member.last_payment }}</td> -->
+                    <td>{{ member.expiry_date }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <script src="{% static 'js/status.js' %}"></script>
+
+{% endblock %}

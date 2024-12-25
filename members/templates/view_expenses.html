@@ -1,0 +1,72 @@
+{% extends 'sidebar.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Fastcardio - Expenses{% endblock %}
+
+{% block extra_styles %}
+    <link rel="stylesheet" href="{% static 'dashboard.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <div class="header">
+        <h1>Fastcardio Expenses</h1>
+        <button class="download-btn"  onclick="location.href='{% url 'New Expense' %}'">
+            Add Expense
+        </button>        
+    </div>
+    
+    <div class="grid">
+        <div class="card">
+            <div class="card-title">Total</div>
+            <div class="card-value">{{ all_members.value|default:0|intcomma }}</div>
+            <div class="card-change positive">{{ all_members.change|default:"No change" }}</div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">Rent</div>
+            <div class="card-value">{{ all_members.value|default:0|intcomma }}</div>
+            <div class="card-change positive">{{ all_members.change|default:"No change" }}</div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">Salary</div>
+            <div class="card-value">{{ active_members.value|default:0|intcomma }}</div>
+            <div class="card-change positive">{{ active_members.change|default:"No change" }}</div>
+        </div>
+        
+        <div class="card">
+            <div class="card-title">Maintenance</div>
+            <div class="card-value">{{ new_members.value|default:0 }}</div>
+            <div class="card-change {% if new_members.value > 0 %}positive{% else %}negative{% endif %}">
+                {{ new_members.change|default:"No change" }}
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-title">Water</div>
+            <div class="card-value">{{ active_checkins.value|default:0 }}</div>
+            <div class="card-change">{{ active_checkins.change|default:"No change" }}</div>
+        </div>
+        
+        <div class="card">
+            <div class="card-title">Cleaners</div>
+            <div class="card-value">{{ expired_members.value|default:0 }}</div>
+            <div class="card-change negative">{{ expired_members.change|default:"No change" }}</div>
+        </div>
+        
+        <div class="card">
+            <div class="card-title">Food</div>
+            <div class="card-value">{{ frozen_members.value|default:0 }}</div>
+            <div class="card-change">{{ frozen_members.change|default:"No change" }}</div>
+        </div>
+        
+        <div class="card">
+            <div class="card-title">Other</div>
+            <div class="card-value">{{ not_attending.value|default:0 }}</div>
+            <div class="card-change negative">{{ not_attending.change|default:"No change" }}</div>
+        </div>
+    </div>
+</div>
+{% endblock %}

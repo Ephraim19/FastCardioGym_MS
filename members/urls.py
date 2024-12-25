@@ -27,9 +27,16 @@ urlpatterns = [
     path('reminders/all/',views.all_reminders, name = "All Reminders" ),
     
     path('expenses/',views.expenses,name="Expenses" ),
+    path('expenses/new/',views.new_expense,name="New Expense" ),
+    
     
     # path('progress/<int:member_id>/',views.progress,name="Progress" ),
     path('member/<int:member_id>/progress/', views.member_progress, name='member_progress'),
     path('member/<int:member_id>/progress/add/', views.add_progress, name='add_progress'),
-    path('member/<int:member_id>/progress/history/', views.get_progress_history, name='progress_history')
+    path('member/<int:member_id>/progress/history/', views.get_progress_history, name='progress_history'),
+    
+    path('reports/',views.reports,name="Reports" ),
+    path('reports/download/',views.download_report,name="download report" ),
+    
+    path('status/', views.member_status, name='member_status'),
 ]

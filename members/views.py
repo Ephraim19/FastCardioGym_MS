@@ -13,10 +13,12 @@ from django.utils.dateparse import parse_date
 from django.utils import timezone
 from datetime import timedelta,datetime
 from django.db.models.functions import TruncMonth
-from django.db.models import Count, Q
+from django.db.models import Count, Q, Max, Subquery, OuterRef
 from django.contrib.auth.decorators import login_required
 import json
 from decimal import Decimal
+from .fastcardio_report import create_fastcardio_report
+
 
 def login_page(request):
     return render(request, 'index.html')
@@ -65,6 +67,12 @@ def custom_logout(request):
     return redirect('login') 
 
 
+from django.utils import timezone
+from datetime import timedelta
+from django.db.models import Q, Subquery, OuterRef
+from django.shortcuts import render
+from .models import Member, PaymentDetails, CheckInOutRecord
+
 def dashboard(request):
     today = timezone.now().date()
     thirty_days_ago = today - timedelta(days=30)
@@ -76,12 +84,42 @@ def dashboard(request):
         date_joined__date__gte=thirty_days_ago
     ).count()
 
+    # Check and update expired memberships based on latest payment
+    daily_expiry = today - timedelta(days=1)
+    monthly_expiry = today - timedelta(days=30)
+    quarterly_expiry = today - timedelta(days=90)
+    biannual_expiry = today - timedelta(days=182)
+    yearly_expiry = today - timedelta(days=365)
+    student_expiry = today - timedelta(days=30)
+
+    # Get latest payment for each member
+    latest_payments_subquery = PaymentDetails.objects.filter(
+        member=OuterRef('pk')
+    ).order_by('-payment_date')[:1]
+
+    # Find expired members based on their latest payment
+    expired_members = Member.objects.annotate(
+        latest_payment_date=Subquery(latest_payments_subquery.values('payment_date')),
+        latest_plan=Subquery(latest_payments_subquery.values('plan'))
+    ).filter(
+        Q(latest_plan='daily', latest_payment_date__lt=daily_expiry) |
+        Q(latest_plan='monthly', latest_payment_date__lt=monthly_expiry) |
+        Q(latest_plan='quarterly', latest_payment_date__lt=quarterly_expiry) |
+        Q(latest_plan='biannually', latest_payment_date__lt=biannual_expiry) |
+        Q(latest_plan='annually', latest_payment_date__lt=yearly_expiry) |
+        Q(latest_plan='student', latest_payment_date__lt=student_expiry)
+    )
+
+    # Update expired members to inactive
+    expired_members.update(is_active=False)
+    expired_count = expired_members.count()
+
     # Active Members (not frozen and is_active)
     active_members = Member.objects.filter(
         is_active=True,
         is_frozen=False
     ).count()
-    
+
     # New members this month
     new_members = Member.objects.filter(
         date_joined__date__gte=thirty_days_ago
@@ -98,33 +136,15 @@ def dashboard(request):
         timestamp__date=today
     ).count()
 
-    # Expired Members (those whose last payment was more than their plan period)
-    daily_expiry = today - timedelta(days=1)
-    monthly_expiry = today - timedelta(days=30)
-    quarterly_expiry = today - timedelta(days=90)
-    biannual_expiry = today - timedelta(days=182)
-    yearly_expiry = today - timedelta(days=365)
-    student_expiry = today - timedelta(days=30)
-
-    # Expired members query
-    expired_members = Member.objects.filter(
-        Q(payments__plan='daily', payments__payment_date__lt=daily_expiry) |
-        Q(payments__plan='monthly', payments__payment_date__lt=monthly_expiry) |
-        Q(payments__plan='quarterly', payments__payment_date__lt=quarterly_expiry) |
-        Q(payments__plan='biannually', payments__payment_date__lt=biannual_expiry) |
-        Q(payments__plan='annually', payments__payment_date__lt=yearly_expiry) |
-        Q(payments__plan='student', payments__payment_date__lt=student_expiry)
-    ).distinct().count()
-
     # Frozen Members
     frozen_members = Member.objects.filter(is_frozen=True).count()
 
-    # Not Attending (no check-ins in last 2 weeks)
+    # Not Attending (no check-ins in last week)
     attending_member_ids = CheckInOutRecord.objects.filter(
         action='check_in',
         timestamp__date__gte=one_weeks_ago
     ).values_list('member_id', flat=True).distinct()
-    
+
     not_attending = Member.objects.exclude(
         id__in=attending_member_ids
     ).filter(is_active=True).count()
@@ -147,7 +167,7 @@ def dashboard(request):
             'change': 'Today'
         },
         'expired_members': {
-            'value': expired_members,
+            'value': expired_count,
             'change': 'Action needed'
         },
         'frozen_members': {
@@ -156,11 +176,12 @@ def dashboard(request):
         },
         'not_attending': {
             'value': not_attending,
-            'change': '1 weeks inactive'
+            'change': '1 week inactive'
         }
     }
 
     return render(request, 'dashboard.html', context)
+
 def newmember(request):
     return render(request, 'newmember.html')
 
@@ -196,6 +217,8 @@ def save_member(request):
     
     return HttpResponse("Error saving member")
 
+
+
 def save_payment(request, member_id=None):
     # Option 1: Use session to get member ID
     if member_id is None:
@@ -225,7 +248,12 @@ def save_payment(request, member_id=None):
             amount=amount,
             transaction_id=transaction_id
         )
-        messages.success(request, f'Payment saved successfully for { member}!')
+
+        # Set member as active when they make a payment
+        member.is_active = True
+        member.save()
+        
+        messages.success(request, f'Payment saved successfully for {member}!')
         
         return redirect("Members")
     
@@ -251,7 +279,7 @@ def members(request):
     # Retrieve members with their total payments
     members_with_payments = []
     
-    for member in Member.objects.filter(is_active=True):
+    for member in Member.objects.all():
         # Get all payment details for this member
         payments = PaymentDetails.objects.filter(member=member)
         
@@ -769,10 +797,11 @@ def freeze_member(request,member_id):
     return render(request, 'freeze.html')
 
 
-# def add_expense(request):
-#     return render(request, 'expenses.html')
-
 def expenses(request):
+    return render(request, 'view_expenses.html')
+
+
+def new_expense(request):
     if request.method == "POST":
         expense = request.POST.get('expense')
         amount = request.POST.get('amount')
@@ -783,7 +812,7 @@ def expenses(request):
                 amount=amount
             )
             messages.success(request, 'Expense saved successfully!')
-            return redirect('Finance')
+            return redirect('Expenses')
         except Exception as e:
             print(e)
             messages.error(request, 'Error saving expense.')
@@ -900,3 +929,349 @@ def get_progress_history(request, member_id):
     }
     
     return JsonResponse(data)
+
+
+def reports(request):
+    today = timezone.now().date()
+    thirty_days_ago = today - timedelta(days=30)
+
+    # Get basic member statistics
+    total_members = Member.objects.count()
+    active_members = Member.objects.filter(is_active=True, is_frozen=False).count()
+    new_members_this_month = Member.objects.filter(
+        date_joined__date__gte=thirty_days_ago
+    ).count()
+    new_active_this_month = Member.objects.filter(
+        date_joined__date__gte=thirty_days_ago,
+        is_active=True
+    ).count()
+
+    # Get check-in statistics
+    active_checkins = CheckInOutRecord.objects.filter(
+        action='check_in',
+        timestamp__date=today
+    ).count()
+
+    # Calculate members not attending (no check-ins in last week)
+    one_week_ago = today - timedelta(days=7)
+    attending_member_ids = CheckInOutRecord.objects.filter(
+        action='check_in',
+        timestamp__date__gte=one_week_ago
+    ).values_list('member_id', flat=True).distinct()
+    
+    not_attending = Member.objects.exclude(
+        id__in=attending_member_ids
+    ).filter(is_active=True).count()
+
+    # Get revenue statistics
+    revenue_data = PaymentDetails.objects.filter(
+        payment_date__gte=thirty_days_ago
+    ).aggregate(
+        total_revenue=Sum('amount'),
+        total_subscriptions=Count('id')
+    )
+
+    # Get subscription breakdowns
+    subscription_data = {}
+    for plan in PaymentDetails.PLAN_CHOICES:
+        plan_data = PaymentDetails.objects.filter(
+            plan=plan[0],
+            payment_date__gte=thirty_days_ago
+        ).aggregate(
+            amount=Sum('amount'),
+            subscribers=Count('id')
+        )
+        subscription_data[plan[0]] = {
+            'amount': plan_data['amount'] or 0,
+            'subscribers': plan_data['subscribers']
+        }
+
+    context = {
+        # Member statistics
+        'total_members': total_members,
+        'active_members': active_members,
+        'new_members_this_month': new_members_this_month,
+        'new_active_this_month': new_active_this_month,
+        'active_checkins': active_checkins,
+        'not_attending': not_attending,
+
+        # Revenue statistics
+        'total_revenue': revenue_data['total_revenue'] or 0,
+        'total_subscriptions': revenue_data['total_subscriptions'] or 0,
+
+        # Subscription breakdowns
+        'daily_subscription_amount': subscription_data['daily']['amount'],
+        'daily_subscribers': subscription_data['daily']['subscribers'],
+        'monthly_subscription_amount': subscription_data['monthly']['amount'],
+        'monthly_subscribers': subscription_data['monthly']['subscribers'],
+        'quarterly_subscription_amount': subscription_data['quarterly']['amount'],
+        'quarterly_subscribers': subscription_data['quarterly']['subscribers'],
+        'biannual_subscription_amount': subscription_data['biannually']['amount'],
+        'biannual_subscribers': subscription_data['biannually']['subscribers'],
+        'annual_subscription_amount': subscription_data['annually']['amount'],
+        'annual_subscribers': subscription_data['annually']['subscribers'],
+        'student_subscription_amount': subscription_data['student']['amount'],
+        'student_subscribers': subscription_data['student']['subscribers'],
+    }
+
+    return render(request, "reports.html", context)
+
+# def download_report(request):
+#     comprehensive_report = create_fastcardio_report()
+
+#     firebase_url = comprehensive_report['firebase_url']
+#     print(firebase_url)
+#     # Return the firebase_url in a JSON response
+#     return JsonResponse({'download_url': firebase_url})
+
+
+
+from django.db.models import Sum, Count, Avg
+from django.utils import timezone
+from datetime import timedelta
+from decimal import Decimal
+
+def get_historical_data(model, date_field, value_field=None, months=6, filters=None):
+    """
+    Get monthly historical data for the specified model and fields
+    
+    Args:
+        model: Django model class
+        date_field: String name of the date field to query
+        value_field: Optional field to sum values from
+        months: Number of months of history to return
+        filters: Optional dictionary of additional filter conditions
+    """
+    end_date = timezone.now().date()
+    start_date = end_date - timedelta(days=30 * months)
+    
+    months_data = []
+    current_date = start_date
+    
+    # Initialize base query filters
+    base_filters = {
+        f'{date_field}__date__gte': current_date,
+        f'{date_field}__date__lte': None  # Will be set in the loop
+    }
+    
+    # Add any additional filters
+    if filters:
+        base_filters.update(filters)
+    
+    while current_date <= end_date:
+        month_end = (current_date + timedelta(days=32)).replace(day=1) - timedelta(days=1)
+        
+        # Update the date range filter
+        query_filters = base_filters.copy()
+        query_filters[f'{date_field}__date__lte'] = month_end
+        
+        if value_field:
+            count = model.objects.filter(**query_filters).aggregate(
+                total=Sum(value_field))['total'] or 0
+        else:
+            count = model.objects.filter(**query_filters).count()
+            
+        months_data.append({
+            'label': current_date.strftime('%b'),
+            'value': float(count) if isinstance(count, Decimal) else count
+        })
+        current_date = (current_date + timedelta(days=32)).replace(day=1)
+    
+    return {
+        'labels': [m['label'] for m in months_data],
+        'values': [m['value'] for m in months_data]
+    }
+
+def get_daily_checkins_distribution():
+    """Get check-in distribution by time slots"""
+    today = timezone.now().date()
+    time_slots = [
+        ('6-9am', 6, 9),
+        ('9-12pm', 9, 12),
+        ('12-3pm', 12, 15),
+        ('3-6pm', 15, 18),
+        ('6-9pm', 18, 21),
+        ('9-11pm', 21, 23)
+    ]
+    
+    distribution = []
+    for slot_name, start_hour, end_hour in time_slots:
+        count = CheckInOutRecord.objects.filter(
+            action='check_in',
+            timestamp__hour__gte=start_hour,
+            timestamp__hour__lt=end_hour
+        ).count()
+        distribution.append(count)
+    
+    return {
+        'labels': [slot[0] for slot in time_slots],
+        'values': distribution
+    }
+
+def get_revenue_breakdown():
+    """Get revenue breakdown by plan type"""
+    total_by_plan = PaymentDetails.objects.values('plan').annotate(
+        total=Sum('amount')
+    ).order_by('-total')
+    
+    return {
+        'labels': [item['plan'].title() for item in total_by_plan],
+        'values': [float(item['total']) for item in total_by_plan]
+    }
+
+def download_report(request):
+    today = timezone.now().date()
+    thirty_days_ago = today - timedelta(days=30)
+    
+    # Get all required metrics
+    total_members = Member.objects.count()
+    active_members = Member.objects.filter(is_active=True, is_frozen=False).count()
+    new_members = Member.objects.filter(date_joined__date__gte=thirty_days_ago).count()
+    active_checkins = CheckInOutRecord.objects.filter(
+        action='check_in',
+        timestamp__date=today
+    ).count()
+    
+    # Calculate gender distribution
+    gender_stats = Member.objects.values('gender').annotate(
+        count=Count('id')
+    )
+    male_percent = next((item['count'] / total_members * 100 
+                        for item in gender_stats if item['gender'].lower() == 'male'), 0)
+    female_percent = next((item['count'] / total_members * 100 
+                         for item in gender_stats if item['gender'].lower() == 'female'), 0)
+    
+    # Get revenue data
+    total_revenue = PaymentDetails.objects.filter(
+        payment_date__gte=thirty_days_ago
+    ).aggregate(total=Sum('amount'))['total'] or 0
+    
+    # First prepare expense data
+    expense_types = list(Expense.objects.values_list('expense_type', flat=True).distinct())
+    expense_data = {
+        "labels": expense_types,
+        "values": [
+            float(Expense.objects.filter(expense_type=exp_type).aggregate(
+                total=Sum('amount'))['total'] or 0) 
+            for exp_type in expense_types
+        ]
+    }
+    
+    # Prepare data dictionary for report
+    report_data = {
+        "All Members": {
+            "current": total_members,
+            "description": f"Total registered members: {total_members} (↑{new_members} this month). "
+                         f"Demographics show {male_percent:.1f}% male, {female_percent:.1f}% female.",
+            "chart_type": "line",
+            "chart_data": get_historical_data(Member, 'date_joined')
+        },
+        "Active Members": {
+            "current": active_members,
+            "description": f"{active_members} active members "
+                         f"({(active_members/total_members*100):.1f}% engagement rate).",
+            "chart_type": "line",
+            "chart_data": get_historical_data(Member, 'date_joined', None, 6)
+        },
+        "Active Check-ins": {
+            "current": active_checkins,
+            "description": "Daily check-ins distribution across different times.",
+            "chart_type": "bar",
+            "chart_data": get_daily_checkins_distribution()
+        },
+        "Not Attending": {
+            "current": Member.objects.filter(is_active=False).count(),
+            "description": "Inactive member trends and reactivation rates.",
+            "chart_type": "line",
+            "chart_data": get_historical_data(Member, 'date_joined', filters={'is_active': False})
+        },
+        "Total Revenue": {
+            "current": f"${float(total_revenue):,.2f}",
+            "description": "Revenue breakdown by subscription type",
+            "chart_type": "pie",
+            "chart_data": get_revenue_breakdown()
+        },
+        "Subscription Distribution": {
+            "current": f"{PaymentDetails.objects.count()} total",
+            "description": "Distribution of subscription types",
+            "chart_type": "pie",
+            "chart_data": {
+                "labels": [plan[1] for plan in PaymentDetails.PLAN_CHOICES],
+                "values": [PaymentDetails.objects.filter(plan=plan[0]).count() 
+                          for plan in PaymentDetails.PLAN_CHOICES]
+            }
+        },
+        "Expenses": {
+            "current": f"${sum(expense_data['values']):,.2f}",
+            "description": "Breakdown of expenses by category",
+            "chart_type": "pie",
+            "chart_data": expense_data
+        }
+    }
+    
+    # Generate and upload report
+    comprehensive_report = create_fastcardio_report(report_data, expense_data)
+    
+    return JsonResponse({'download_url': comprehensive_report['firebase_url']})
+
+
+def member_status(request):
+    today = timezone.now().date()
+    members = Member.objects.annotate(
+        latest_payment_date=Max('payments__payment_date')
+    )
+    
+    active_members = []
+    inactive_members = []
+    expired_members = []
+    
+    for member in members:
+        member_data = {
+            'name': f"{member.first_name} {member.last_name}",
+            'phone': member.phone_number,
+            'joined': member.date_joined.strftime('%Y-%m-%d'),
+            'gender': member.gender,
+        }
+        
+        latest_payment = PaymentDetails.objects.filter(member=member).order_by('-payment_date').first()
+        
+        if latest_payment:
+            plan_duration = {
+                'daily': 1, 'monthly': 30, 'quarterly': 90,
+                'biannually': 180, 'annually': 365, 'student': 30
+            }
+            
+            expiry_date = latest_payment.payment_date + timedelta(days=plan_duration[latest_payment.plan])
+            member_data.update({
+                'plan': latest_payment.plan,
+                'last_payment': latest_payment.payment_date.strftime('%Y-%m-%d'),
+                'expiry_date': expiry_date.strftime('%Y-%m-%d')
+            })
+            
+            if member.is_frozen:
+                inactive_members.append(member_data)
+            elif expiry_date < today:
+                expired_members.append(member_data)
+            elif member.is_active:
+                active_members.append(member_data)
+            else:
+                inactive_members.append(member_data)
+        else:
+            member_data.update({
+                'plan': 'No plan',
+                'last_payment': 'Never',
+                'expiry_date': 'N/A'
+            })
+            inactive_members.append(member_data)
+    
+    context = {
+        'active_members': active_members,
+        'inactive_members': inactive_members,
+        'expired_members': expired_members,
+        'stats': {
+            'total_active': len(active_members),
+            'total_inactive': len(inactive_members),
+            'total_expired': len(expired_members)
+        }
+    }
+    return render(request, 'status.html', context)

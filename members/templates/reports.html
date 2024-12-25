@@ -1,0 +1,102 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FastCardio - Reports</title>
+    <link rel="stylesheet" href="{% static 'reports.css' %}">
+</head>
+<body>
+    <nav class="sidebar">
+        <div class="sidebar-logo">FastCardio</div>
+        <ul class="sidebar-menu">
+            <li><a href="{% url 'Dashboard' %}">Dashboard</a></li>
+            <li><a href="{% url 'New member' %}">New member</a></li>
+            <li><a href="{% url 'Members' %}">All members</a></li>
+            <li><a href="{% url 'Checkin' %}">Checkin/Checkout</a></li>
+            <li><a href="{% url 'Finance' %}">Finance</a></li>
+            <li><a href="{% url 'Reminders' %}">Reminders</a></li>
+            <li><a href="{% url 'Expenses' %}">Expenses</a></li>
+            <li><a href="{% url 'Reports' %}" class="active">Reports</a></li>
+            <li><a href="{% url 'Log out' %}">Log out</a></li>
+        </ul>
+    </nav>
+
+    <main class="main-content">
+        <div class="dashboard-header">
+            <h1 class="dashboard-title">System Report</h1>
+            <button class="download-btn">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Download Report
+            </button>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>All Members</h3>
+                <div class="number">{{ total_members }}</div>
+                <div class="sub-text positive-change">+{{ new_members_this_month }} this month</div>
+            </div>
+            <div class="stat-card">
+                <h3>Active Members</h3>
+                <div class="number">{{ active_members }}</div>
+                <div class="sub-text positive-change">+{{ new_active_this_month }} this month</div>
+            </div>
+            <div class="stat-card">
+                <h3>Active Check-ins</h3>
+                <div class="number">{{ active_checkins }}</div>
+                <div class="sub-text">Today</div>
+            </div>
+            <div class="stat-card">
+                <h3>Not Attending</h3>
+                <div class="number">{{ not_attending }}</div>
+                <div class="sub-text">1 week inactive</div>
+            </div>
+        </div>
+
+        <h2 class="section-title">Revenue Overview</h2>
+        <div class="subscription-grid">
+            <div class="subscription-card total">
+                <h3>Total Revenue</h3>
+                <div class="amount">Ksh {{ total_revenue|floatformat:2 }}</div>
+                <div class="subscribers">{{ total_subscriptions }} subscriptions</div>
+            </div>
+            <div class="subscription-card">
+                <h3>Daily Plans</h3>
+                <div class="amount">Ksh {{ daily_subscription_amount|floatformat:2 }}</div>
+                <div class="subscribers">{{ daily_subscribers }} subscribers</div>
+            </div>
+            <div class="subscription-card">
+                <h3>Monthly Plans</h3>
+                <div class="amount">Ksh {{ monthly_subscription_amount|floatformat:2 }}</div>
+                <div class="subscribers">{{ monthly_subscribers }} subscribers</div>
+            </div>
+            <div class="subscription-card">
+                <h3>Quarterly Plans</h3>
+                <div class="amount">Ksh {{ quarterly_subscription_amount|floatformat:2 }}</div>
+                <div class="subscribers">{{ quarterly_subscribers }} subscribers</div>
+            </div>
+            <div class="subscription-card">
+                <h3>Biannual Plans</h3>
+                <div class="amount">Ksh {{ biannual_subscription_amount|floatformat:2 }}</div>
+                <div class="subscribers">{{ biannual_subscribers }} subscribers</div>
+            </div>
+            <div class="subscription-card">
+                <h3>Annual Plans</h3>
+                <div class="amount">Ksh {{ annual_subscription_amount|floatformat:2 }}</div>
+                <div class="subscribers">{{ annual_subscribers }} subscribers</div>
+            </div>
+            <div class="subscription-card">
+                <h3>Student Plans</h3>
+                <div class="amount">Ksh {{ student_subscription_amount|floatformat:2 }}</div>
+                <div class="subscribers">{{ student_subscribers }} subscribers</div>
+            </div>
+        </div>
+    </main>
+
+    <script src="{% static 'js/report.js' %}"></script>
+</body>
+</html>
