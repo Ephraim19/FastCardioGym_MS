@@ -56,6 +56,18 @@ body {
   transition: transform 0.2s;
 }
 
+.date-filter {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  align-items: center;
+}
+.date-filter input {
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
 .card:hover {
   transform: translateY(-2px);
 }

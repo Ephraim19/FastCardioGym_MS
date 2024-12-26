@@ -1,14 +1,14 @@
+{% extends 'sidebar.html' %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FastCardio - Reports</title>
+
+{% block title %}Fastcardio - Report{% endblock %}
+
+{% block extra_styles %}
     <link rel="stylesheet" href="{% static 'reports.css' %}">
-</head>
-<body>
-    <nav class="sidebar">
+{% endblock %}
+
+{% block content %}
+    <!-- <nav class="sidebar">
         <div class="sidebar-logo">FastCardio</div>
         <ul class="sidebar-menu">
             <li><a href="{% url 'Dashboard' %}">Dashboard</a></li>
@@ -21,9 +21,10 @@
             <li><a href="{% url 'Reports' %}" class="active">Reports</a></li>
             <li><a href="{% url 'Log out' %}">Log out</a></li>
         </ul>
-    </nav>
+    </nav> -->
 
-    <main class="main-content">
+    <!-- <main class="main-content"> -->
+    <main>
         <div class="dashboard-header">
             <h1 class="dashboard-title">System Report</h1>
             <button class="download-btn">
@@ -98,5 +99,5 @@
     </main>
 
     <script src="{% static 'js/report.js' %}"></script>
-</body>
-</html>
+    
+{% endblock %}

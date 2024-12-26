@@ -67,11 +67,6 @@ def custom_logout(request):
     return redirect('login') 
 
 
-from django.utils import timezone
-from datetime import timedelta
-from django.db.models import Q, Subquery, OuterRef
-from django.shortcuts import render
-from .models import Member, PaymentDetails, CheckInOutRecord
 
 def dashboard(request):
     today = timezone.now().date()
@@ -85,7 +80,7 @@ def dashboard(request):
     ).count()
 
     # Check and update expired memberships based on latest payment
-    daily_expiry = today - timedelta(days=1)
+    daily_expiry = today - timedelta(days=0)
     monthly_expiry = today - timedelta(days=30)
     quarterly_expiry = today - timedelta(days=90)
     biannual_expiry = today - timedelta(days=182)
@@ -1016,20 +1011,7 @@ def reports(request):
 
     return render(request, "reports.html", context)
 
-# def download_report(request):
-#     comprehensive_report = create_fastcardio_report()
 
-#     firebase_url = comprehensive_report['firebase_url']
-#     print(firebase_url)
-#     # Return the firebase_url in a JSON response
-#     return JsonResponse({'download_url': firebase_url})
-
-
-
-from django.db.models import Sum, Count, Avg
-from django.utils import timezone
-from datetime import timedelta
-from decimal import Decimal
 
 def get_historical_data(model, date_field, value_field=None, months=6, filters=None):
     """
