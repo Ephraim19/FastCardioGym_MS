@@ -77,7 +77,7 @@ WSGI_APPLICATION = 'Fastcardio.wsgi.application'
 
 DATABASES = {
     
-    'default': dj_database_url.config(default=config('postgresql://fastcardio_user:zCehy0y9dcqfk2boHqtqH94PnsjoIFnm@dpg-ctnfd6dumphs73c66co0-a.oregon-postgres.render.com/fastcardio'))
+    'default': dj_database_url.config(default=config('DATABASE_URL'))
 }
 
 # Password validation
