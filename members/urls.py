@@ -24,13 +24,12 @@ urlpatterns = [
     path('revenue-summary/', views.RevenueAndMembershipView.as_view(), name='revenue-summary'),
     
     path('reminders/',views.reminders, name = "Reminders" ),
-    path('reminders/all/',views.all_reminders, name = "All Reminders" ),
+    path('reminders/send/', views.send_reminder, name='send_reminder'),
     
     path('expenses/',views.expenses,name="Expenses" ),
     path('expenses/new/',views.new_expense,name="New Expense" ),
     
     
-    # path('progress/<int:member_id>/',views.progress,name="Progress" ),
     path('member/<int:member_id>/progress/', views.member_progress, name='member_progress'),
     path('member/<int:member_id>/progress/add/', views.add_progress, name='add_progress'),
     path('member/<int:member_id>/progress/history/', views.get_progress_history, name='progress_history'),

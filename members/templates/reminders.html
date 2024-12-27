@@ -29,46 +29,56 @@
         const reminderContainer = document.getElementById('reminder-container');
         const filterButtons = document.querySelectorAll('.filter-btn');
         
-        // Function to create reminder card HTML
+
         function createReminderCard(reminder) {
-            let details = '';
-            if (reminder.type === 'attendance') {
-                details = `
-                    <p>Hasn't attended gym in ${reminder.days_absent} days</p>
-                    <p>Subscription Active</p>
-                `;
-            } else if (reminder.type === 'subscription') {
-                details = `
-                    <p>Subscription expiring in ${reminder.days_until_expiry} days</p>
-                    <p>Last attended: ${reminder.last_attended ? new Date(reminder.last_attended).toLocaleDateString() : 'Never'}</p>
-                `;
-            } else if (reminder.category) {  // For sent reminders
-                details = `
-                    <p>${reminder.reminder}</p>
-                    <p>Sent on: ${reminder.sent_date}</p>
-                    <p>Type: ${reminder.category}</p>
-                `;
-            }
-            
-            return `
-                <div class="reminder-card">
-                    <div class="reminder-details">
-                        <h3>${reminder.name}</h3>
-                        ${details}
-                    </div>
-                    <div class="reminder-action">
-                        <button class="btn send-reminder" data-member-id="${reminder.member_id}">
-                            Send Reminder
-                        </button>
-                    </div>
+    let details = '';
+    let statusClass = '';
+    
+    if (reminder.type === 'attendance') {
+        statusClass = 'attendance-reminder';
+        details = `
+            <p><strong>Days Since Last Visit:</strong> ${reminder.days_absent}</p>
+            <p><strong>Status:</strong> Active Membership</p>
+        `;
+    } else if (reminder.type === 'subscription') {
+        statusClass = 'subscription-reminder';
+        const lastAttended = reminder.last_attended ? 
+            new Date(reminder.last_attended).toLocaleDateString() : 'Never';
+        details = `
+            <p><strong>Days Until Expiry:</strong> ${reminder.days_until_expiry}</p>
+            <p><strong>Expiry Date:</strong> ${reminder.expiry_date}</p>
+            <p><strong>Last Attended:</strong> ${lastAttended}</p>
+        `;
+    } else if (reminder.category) {
+        statusClass = 'sent-reminder';
+        details = `
+            <p><strong>Message:</strong> ${reminder.reminder}</p>
+            <p><strong>Sent On:</strong> ${reminder.sent_date}</p>
+            <p><strong>Type:</strong> ${reminder.category}</p>
+        `;
+    }
+    
+    return `
+        <div class="reminder-card ${statusClass}">
+            <div class="reminder-details">
+                <h3>${reminder.name}</h3>
+                ${details}
+            </div>
+            ${!reminder.category ? `
+                <div class="reminder-action">
+                    <button class="btn send-reminder" data-member-id="${reminder.member_id}">
+                        Send Reminder
+                    </button>
                 </div>
-            `;
-        }
+            ` : ''}
+        </div>
+    `;
+}
         
         // Function to load reminders
         async function loadReminders(type) {
             try {
-                const response = await fetch(`/reminders/all/?type=${type}`, {
+                const response = await fetch(`/reminders/?type=${type}`, {
                     headers: {
                         'X-Requested-With': 'XMLHttpRequest'
                     }
@@ -97,27 +107,106 @@
         }
         
         // Function to handle sending reminder
-        async function handleSendReminder(event) {
-            const memberId = event.target.dataset.memberId;
-            try {
-                const response = await fetch('/reminders/send/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCookie('csrftoken')
-                    },
-                    body: JSON.stringify({ member_id: memberId })
-                });
-                
-                if (response.ok) {
-                    // Refresh the reminders list
-                    const activeButton = document.querySelector('.filter-btn.active');
-                    loadReminders(activeButton.dataset.type);
-                }
-            } catch (error) {
-                console.error('Error sending reminder:', error);
-            }
+        // Add this function to your existing JavaScript
+async function handleSendReminder(event) {
+    const button = event.target;
+    const memberId = button.dataset.memberId;
+    
+    try {
+        // Disable the button to prevent multiple clicks
+        button.disabled = true;
+        button.textContent = 'Sending...';
+        
+        const response = await fetch('/reminders/send/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({ member_id: memberId })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            // Show success message
+            showNotification('Success', 'Reminder sent successfully', 'success');
+            
+            // Refresh the reminders list
+            const activeButton = document.querySelector('.filter-btn.active');
+            loadReminders(activeButton.dataset.type);
+        } else {
+            // Show error message
+            showNotification('Error', data.message || 'Failed to send reminder', 'error');
+            
+            // Re-enable the button
+            button.disabled = false;
+            button.textContent = 'Send Reminder';
         }
+    } catch (error) {
+        console.error('Error sending reminder:', error);
+        showNotification('Error', 'Failed to send reminder', 'error');
+        
+        // Re-enable the button
+        button.disabled = false;
+        button.textContent = 'Send Reminder';
+    }
+}
+
+// Add this notification function
+function showNotification(title, message, type) {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.innerHTML = `
+        <strong>${title}</strong>
+        <p>${message}</p>
+    `;
+    
+    // Add notification to the page
+    document.body.appendChild(notification);
+    
+    // Remove notification after 3 seconds
+    setTimeout(() => {
+        notification.remove();
+    }, 3000);
+}
+
+// Add some CSS for the notifications
+const style = document.createElement('style');
+style.textContent = `
+    .notification {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 15px 20px;
+        border-radius: 4px;
+        z-index: 1000;
+        animation: slideIn 0.3s ease-out;
+    }
+    
+    .notification.success {
+        background-color: #4CAF50;
+        color: white;
+    }
+    
+    .notification.error {
+        background-color: #f44336;
+        color: white;
+    }
+    
+    @keyframes slideIn {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+`;
+document.head.appendChild(style);
         
         // Function to get CSRF token
         function getCookie(name) {
