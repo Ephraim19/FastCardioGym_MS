@@ -1,4 +1,3 @@
-
 {% extends 'sidebar.html' %}
 {% load static %}
 
@@ -12,18 +11,24 @@
     <div class="container">
         <div class="profile-header">
             <div class="profile-header-left">
-                <h1>{{ member.first_name }} {{ member.last_name }} - <span style="font-size: 18px;" class="status-badge status-{{ membership_status|lower }}">{{ membership_status }}</span> </h1>
+                <h1>
+                    {{ member.first_name }} {{ member.last_name }}
+                    <span class="status-badge status-{{ membership_status|lower }}">{{ membership_status }}</span>
+                </h1>
                 
-                <a href="{% url 'Payment' member_id=member.id %}">
-                    <span class="status-badge status-{{ membership_status|lower }}">New Payment</span>
-                </a> 
-                <a href="{% url 'freeze' member_id=member.id %}">
-                    <span class="status-badge status-{{ membership_status|lower }}">Freeze</span>
-                </a>
-                <a href="{% url 'member_progress' member_id=member.id %}">
-                    <span class="status-badge status-{{ membership_status|lower }}">Progress</span>
-                </a>
+                <div class="header-actions">
+                    <a href="{% url 'Payment' member_id=member.id %}" class="status-badge status-{{ membership_status|lower }}">
+                        <span>New Payment</span>
+                    </a> 
+                    <a href="{% url 'freeze' member_id=member.id %}" class="status-badge status-{{ membership_status|lower }}">
+                        <span>Freeze</span>
+                    </a>
+                    <a href="{% url 'member_progress' member_id=member.id %}" class="status-badge status-{{ membership_status|lower }}">
+                        <span>Progress</span>
+                    </a>
+                </div>
             </div>
+            
             <div class="profile-header-right">
                 {% if expiry_date %}
                     <p>Membership expires: {{ expiry_date|date:"F d, Y" }}</p>

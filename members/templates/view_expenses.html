@@ -6,79 +6,81 @@
 
 {% block extra_styles %}
     <link rel="stylesheet" href="{% static 'dashboard.css' %}">
-    <style>
-        .date-filter {
-            display: flex;
-            gap: 1rem;
-            margin-bottom: 1rem;
-            align-items: center;
-        }
-        .date-filter input {
-            padding: 0.5rem;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-        }
-    </style>
+    <link rel="stylesheet" href="{% static 'view-expenses.css' %}">
 {% endblock %}
 
 {% block content %}
 <div class="dashboard">
     <div class="header">
-        <h1>Fastcardio Expenses</h1>
-        <div class="date-filter">
-            <input type="date" id="start-date">
-            <input type="date" id="end-date">
-            <button class="download-btn" onclick="location.href='{% url 'New Expense' %}'">
-                Add Expense
-            </button>
+        <div class="expenses-header">
+            <h1>Expenses Overview</h1>
+            <div class="header-controls">
+                <div class="date-range">
+                    <div class="date-input-group">
+                        <label for="start-date">Start Date</label>
+                        <input type="date" id="start-date">
+                    </div>
+                    <div class="date-input-group">
+                        <label for="end-date">End Date</label>
+                        <input type="date" id="end-date">
+                    </div>
+                </div>
+                <button class="add-expense-btn" onclick="location.href='{% url 'New Expense' %}'">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    Add New Expense
+                </button>
+            </div>
         </div>
     </div>
     
     <div class="grid">
-        <div class="card" id="total-card">
-            <div class="card-title">Total</div>
+        <div class="card expense-card" id="total-card">
+            <div class="card-title">Total Expenses</div>
             <div class="card-value">0</div>
             <div class="card-change">Loading...</div>
         </div>
 
-        <div class="card" id="rent-card">
-            <div class="card-title">Rent</div>
+        <div class="card expense-card" id="rent-card">
+            <div class="card-title">Rent Expenses</div>
             <div class="card-value">0</div>
             <div class="card-change">Loading...</div>
         </div>
 
-        <div class="card" id="salary-card">
-            <div class="card-title">Salary</div>
+        <div class="card expense-card" id="salary-card">
+            <div class="card-title">Salary Expenses</div>
             <div class="card-value">0</div>
             <div class="card-change">Loading...</div>
         </div>
         
-        <div class="card" id="maintenance-card">
-            <div class="card-title">Maintenance</div>
+        <div class="card expense-card" id="maintenance-card">
+            <div class="card-title">Maintenance Costs</div>
             <div class="card-value">0</div>
             <div class="card-change">Loading...</div>
         </div>
         
-        <div class="card" id="water-card">
-            <div class="card-title">Water</div>
+        <div class="card expense-card" id="water-card">
+            <div class="card-title">Water Expenses</div>
             <div class="card-value">0</div>
             <div class="card-change">Loading...</div>
         </div>
         
-        <div class="card" id="cleaners-card">
-            <div class="card-title">Cleaners</div>
+        <div class="card expense-card" id="cleaners-card">
+            <div class="card-title">Cleaning Services</div>
             <div class="card-value">0</div>
             <div class="card-change">Loading...</div>
         </div>
         
-        <div class="card" id="food-card">
-            <div class="card-title">Food</div>
+        <div class="card expense-card" id="food-card">
+            <div class="card-title">Food Expenses</div>
             <div class="card-value">0</div>
             <div class="card-change">Loading...</div>
         </div>
         
-        <div class="card" id="other-card">
-            <div class="card-title">Other</div>
+        <div class="card expense-card" id="other-card">
+            <div class="card-title">Other Expenses</div>
             <div class="card-value">0</div>
             <div class="card-change">Loading...</div>
         </div>
@@ -93,13 +95,13 @@ async function fetchExpenseData() {
     const startDate = document.getElementById('start-date').value;
     const endDate = document.getElementById('end-date').value;
     
-    // Only fetch if we have both dates
     if (!startDate || !endDate) return;
     
     try {
-        const queryParams = new URLSearchParams();
-        queryParams.append('start_date', startDate);
-        queryParams.append('end_date', endDate);
+        const queryParams = new URLSearchParams({
+            start_date: startDate,
+            end_date: endDate
+        });
         
         const response = await fetch(`/revenue-summary/?${queryParams.toString()}`);
         if (!response.ok) throw new Error('Failed to fetch expense data');
@@ -113,12 +115,9 @@ async function fetchExpenseData() {
 }
 
 function debounceUpdate() {
-    // Clear any existing timeout
     if (fetchTimeout) {
         clearTimeout(fetchTimeout);
     }
-    
-    // Set a new timeout to fetch data after 500ms of no changes
     fetchTimeout = setTimeout(fetchExpenseData, 500);
 }
 
@@ -155,7 +154,6 @@ function updateDashboard(data) {
     const expenses = data.expenses;
     const totalExpenses = data.total_expenses;
     
-    // Update all expense cards
     updateCard('total-card', totalExpenses, previousData?.total_expenses);
     updateCard('rent-card', expenses.rent || 0, previousData?.expenses?.rent);
     updateCard('salary-card', expenses.salary || 0, previousData?.expenses?.salary);
@@ -170,18 +168,15 @@ function validateDateRange() {
     const startDate = document.getElementById('start-date');
     const endDate = document.getElementById('end-date');
     
-    // Ensure end date isn't before start date
     if (startDate.value && endDate.value && endDate.value < startDate.value) {
         endDate.value = startDate.value;
     }
 }
 
-// Initialize date range and fetch data when the page loads
 document.addEventListener('DOMContentLoaded', () => {
     const startDateInput = document.getElementById('start-date');
     const endDateInput = document.getElementById('end-date');
     
-    // Set initial dates for the current month
     const today = new Date();
     const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
     const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
@@ -189,7 +184,6 @@ document.addEventListener('DOMContentLoaded', () => {
     startDateInput.value = firstDay.toISOString().split('T')[0];
     endDateInput.value = lastDay.toISOString().split('T')[0];
     
-    // Add event listeners for date changes
     startDateInput.addEventListener('change', () => {
         validateDateRange();
         debounceUpdate();
@@ -200,7 +194,6 @@ document.addEventListener('DOMContentLoaded', () => {
         debounceUpdate();
     });
     
-    // Fetch initial data
     fetchExpenseData();
 });
 </script>

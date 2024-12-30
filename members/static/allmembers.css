@@ -9,7 +9,7 @@
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    font-family: Arial, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
 body {
@@ -19,32 +19,38 @@ body {
 }
 
 .dashboard {
+    width: 100%;
     max-width: 1200px;
     margin: 0 auto;
-    padding: 20px;
+    padding: clamp(0.5rem, 3vw, 1.5rem);
 }
 
 .dashboard-header {
     background-color: var(--primary-pink);
     color: white;
-    padding: 20px;
+    padding: clamp(1rem, 4vw, 1.5rem);
     text-align: center;
     border-radius: 10px 10px 0 0;
+    margin-bottom: clamp(1rem, 3vw, 1.5rem);
+}
+
+.dashboard-header h1 {
+    font-size: clamp(1.2rem, 4vw, 1.8rem);
 }
 
 .search-container {
     display: flex;
     justify-content: center;
-    margin: 20px 0;
+    margin: clamp(1rem, 3vw, 1.5rem) 0;
 }
 
 .search-input {
     width: 100%;
     max-width: 500px;
-    padding: 10px;
+    padding: clamp(0.5rem, 2vw, 0.8rem) clamp(1rem, 3vw, 1.5rem);
     border: 2px solid var(--light-pink);
     border-radius: 25px;
-    font-size: 16px;
+    font-size: clamp(0.875rem, 2vw, 1rem);
     transition: all 0.3s ease;
 }
 
@@ -54,6 +60,28 @@ body {
     box-shadow: 0 0 10px rgba(255, 105, 180, 0.3);
 }
 
+/* Messages Styles */
+.messages {
+    width: 100%;
+    padding: clamp(0.5rem, 2vw, 0.8rem);
+    margin-bottom: 1rem;
+    border-radius: 5px;
+    font-size: clamp(0.875rem, 2vw, 1rem);
+}
+
+.messages.error {
+    background-color: #ffdddd;
+    border: 1px solid #ff0000;
+    color: #ff0000;
+}
+
+.messages.success {
+    background-color: #ddffdd;
+    border: 1px solid #00ff00;
+    color: #008000;
+}
+
+/* Table Styles */
 .members-table {
     width: 100%;
     background-color: white;
@@ -70,7 +98,7 @@ body {
 
 .members-table th, 
 .members-table td {
-    padding: 12px 15px;
+    padding: clamp(0.5rem, 2vw, 0.8rem);
     text-align: left;
     border-bottom: 1px solid #ddd;
 }
@@ -83,18 +111,70 @@ body {
     background-color: #f5f5f5;
 }
 
-@media (max-width: 768px) {
-    .members-table {
-        font-size: 14px;
-    }
-    
-    .members-table th, 
-    .members-table td {
-        padding: 8px 10px;
-    }
-}
-
 a {
     text-decoration: none;
     color: var(--primary-pink);
+    font-weight: 500;
+}
+
+/* Responsive Table Styles */
+@media screen and (max-width: 768px) {
+    .members-table {
+        display: block;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    .members-table thead {
+        display: none; /* Hide table headers on mobile */
+    }
+    
+    .members-table tbody tr {
+        display: block;
+        margin-bottom: 1rem;
+        border: 1px solid var(--light-pink);
+        border-radius: 8px;
+        background-color: white;
+    }
+    
+    .members-table td {
+        display: block;
+        text-align: right;
+        padding: 0.8rem;
+        position: relative;
+        border-bottom: 1px solid #eee;
+    }
+    
+    .members-table td:last-child {
+        border-bottom: none;
+    }
+    
+    /* Add labels for mobile view */
+    .members-table td::before {
+        content: attr(data-label);
+        float: left;
+        font-weight: bold;
+        text-transform: uppercase;
+        font-size: 0.85em;
+        color: var(--dark-pink);
+    }
+}
+
+/* Additional Mobile Optimizations */
+@media screen and (max-width: 480px) {
+    .dashboard {
+        padding: 0.5rem;
+    }
+    
+    .search-input {
+        font-size: 0.875rem;
+        padding: 0.5rem 1rem;
+    }
+}
+
+/* Safe area insets for modern mobile devices */
+@supports (padding: max(0px)) {
+    .dashboard {
+        padding: max(0.5rem, env(safe-area-inset-left)) max(0.5rem, env(safe-area-inset-right));
+    }
 }

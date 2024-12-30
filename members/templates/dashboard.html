@@ -12,52 +12,74 @@
 <div class="dashboard">
     <div class="header">
         <h1>FastCardio Dashboard</h1>
-        <p>Membership Overview</p>
+        <p>Real-time Membership Analytics</p>
     </div>
     
-    <div class="grid">
-        <div class="card">
-            <div class="card-title">All Members</div>
-            <div class="card-value">{{ all_members.value|default:0|intcomma }}</div>
-            <div class="card-change positive">{{ all_members.change|default:"No change" }}</div>
-        </div>
-
-        <div class="card">
-            <div class="card-title">Active Members</div>
-            <div class="card-value">{{ active_members.value|default:0|intcomma }}</div>
-            <div class="card-change positive">{{ active_members.change|default:"No change" }}</div>
-        </div>
-        
-        <div class="card">
-            <div class="card-title">New Members</div>
-            <div class="card-value">{{ new_members.value|default:0 }}</div>
-            <div class="card-change {% if new_members.value > 0 %}positive{% else %}negative{% endif %}">
-                {{ new_members.change|default:"No new members" }}
+    <div class="content-wrapper">
+        <div class="grid">
+            <div class="card">
+                <div class="card-title">All Members</div>
+                <div class="card-value">{{ all_members.value|default:0|intcomma }}</div>
+                <div class="card-change positive">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="18 15 12 9 6 15"></polyline>
+                    </svg>
+                    {{ all_members.change|default:"No change" }}
+                </div>
             </div>
-        </div>
-        
-        <div class="card">
-            <div class="card-title">Active Check-ins</div>
-            <div class="card-value">{{ active_checkins.value|default:0 }}</div>
-            <div class="card-change">{{ active_checkins.change|default:"No check-ins today" }}</div>
-        </div>
-        
-        <div class="card">
-            <div class="card-title">Expired Members</div>
-            <div class="card-value">{{ expired_members.value|default:0 }}</div>
-            <div class="card-change negative">{{ expired_members.change|default:"No expired memberships" }}</div>
-        </div>
-        
-        <div class="card">
-            <div class="card-title">Frozen Members</div>
-            <div class="card-value">{{ frozen_members.value|default:0 }}</div>
-            <div class="card-change">{{ frozen_members.change|default:"No frozen members" }}</div>
-        </div>
-        
-        <div class="card">
-            <div class="card-title">Not Attending</div>
-            <div class="card-value">{{ not_attending.value|default:0 }}</div>
-            <div class="card-change negative">{{ not_attending.change|default:"All members active" }}</div>
+
+            <div class="card">
+                <div class="card-title">Active Members</div>
+                <div class="card-value">{{ active_members.value|default:0|intcomma }}</div>
+                <div class="card-change positive">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="18 15 12 9 6 15"></polyline>
+                    </svg>
+                    {{ active_members.change|default:"No change" }}
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-title">New Members</div>
+                <div class="card-value">{{ new_members.value|default:0 }}</div>
+                <div class="card-change {% if new_members.value > 0 %}positive{% else %}negative{% endif %}">
+                    {{ new_members.change|default:"No new members" }}
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-title">Active Check-ins</div>
+                <div class="card-value">{{ active_checkins.value|default:0 }}</div>
+                <div class="card-change">{{ active_checkins.change|default:"No check-ins today" }}</div>
+            </div>
+            
+            <div class="card">
+                <div class="card-title">Expired Members</div>
+                <div class="card-value">{{ expired_members.value|default:0 }}</div>
+                <div class="card-change negative">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                    {{ expired_members.change|default:"No expired memberships" }}
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-title">Frozen Members</div>
+                <div class="card-value">{{ frozen_members.value|default:0 }}</div>
+                <div class="card-change">{{ frozen_members.change|default:"No frozen members" }}</div>
+            </div>
+            
+            <div class="card">
+                <div class="card-title">Not Attending</div>
+                <div class="card-value">{{ not_attending.value|default:0 }}</div>
+                <div class="card-change negative">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                    {{ not_attending.change|default:"All members active" }}
+                </div>
+            </div>
         </div>
     </div>
 </div>

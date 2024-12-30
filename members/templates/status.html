@@ -8,106 +8,138 @@
 {% endblock %}
 
 {% block content %}
-
-    <div class="dashboard-header">
-        <h1 class="dashboard-title">Member Status</h1>
-    </div>
-    <div class="stats-container">
-        <div class="stat-card">
-            <h3>Active Members</h3>
-            <div class="count">{{ stats.total_active }}</div>
+    <div class="dashboard-container">
+        <div class="dashboard-header">
+            <div class="header-content">
+                <h1 class="dashboard-title">Member Status</h1>
+                <p class="dashboard-subtitle">Overview of all member activities</p>
+            </div>
         </div>
-        <div class="stat-card">
-            <h3>Inactive Members</h3>
-            <div class="count">{{ stats.total_inactive }}</div>
+
+        <div class="stats-container">
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="9" cy="7" r="4"></circle>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                    </svg>
+                </div>
+                <div class="stat-info">
+                    <h3>Active Members</h3>
+                    <div class="count">{{ stats.total_active }}</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="9" cy="7" r="4"></circle>
+                        <line x1="17" y1="8" x2="23" y2="14"></line>
+                        <line x1="23" y1="8" x2="17" y2="14"></line>
+                    </svg>
+                </div>
+                <div class="stat-info">
+                    <h3>Inactive Members</h3>
+                    <div class="count">{{ stats.total_inactive }}</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="9" cy="7" r="4"></circle>
+                        <path d="M21 15l-3-3-3 3"></path>
+                        <path d="M18 18v-6"></path>
+                    </svg>
+                </div>
+                <div class="stat-info">
+                    <h3>Expired Members</h3>
+                    <div class="count">{{ stats.total_expired }}</div>
+                </div>
+            </div>
         </div>
-        <div class="stat-card">
-            <h3>Expired Members</h3>
-            <div class="count">{{ stats.total_expired }}</div>
+
+        <div class="content-section">
+            <div class="tabs">
+                <button class="tab-button active" onclick="openTab(event, 'active')">Active</button>
+                <button class="tab-button" onclick="openTab(event, 'inactive')">Inactive</button>
+                <button class="tab-button" onclick="openTab(event, 'expired')">Expired</button>
+            </div>
+
+            <div class="table-container">
+                <div id="active" class="tab-content active">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Phone</th>
+                                <th>Plan</th>
+                                <th>Expiry Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for member in active_members %}
+                            <tr>
+                                <td data-label="Name">{{ member.name }}</td>
+                                <td data-label="Phone">{{ member.phone }}</td>
+                                <td data-label="Plan">{{ member.plan }}</td>
+                                <td data-label="Expiry Date">{{ member.expiry_date }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div id="inactive" class="tab-content">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Phone</th>
+                                <th>Plan</th>
+                                <th>Expiry Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for member in inactive_members %}
+                            <tr>
+                                <td data-label="Name">{{ member.name }}</td>
+                                <td data-label="Phone">{{ member.phone }}</td>
+                                <td data-label="Plan">{{ member.plan }}</td>
+                                <td data-label="Expiry Date">{{ member.expiry_date }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div id="expired" class="tab-content">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Phone</th>
+                                <th>Plan</th>
+                                <th>Expiry Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for member in expired_members %}
+                            <tr>
+                                <td data-label="Name">{{ member.name }}</td>
+                                <td data-label="Phone">{{ member.phone }}</td>
+                                <td data-label="Plan">{{ member.plan }}</td>
+                                <td data-label="Expiry Date">{{ member.expiry_date }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
-    </div>
-
-    <div class="tabs">
-        <button class="tab-button active" onclick="openTab(event, 'active')">Active</button>
-        <button class="tab-button" onclick="openTab(event, 'inactive')">Inactive</button>
-        <button class="tab-button" onclick="openTab(event, 'expired')">Expired</button>
-    </div>
-
-    <div id="active" class="tab-content active">
-        <table>
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Phone</th>
-                    <th>Plan</th>
-                    <!-- <th>Last Payment</th> -->
-                    <th>Expiry Date</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for member in active_members %}
-                <tr>
-                    <td>{{ member.name }}</td>
-                    <td>{{ member.phone }}</td>
-                    <td>{{ member.plan }}</td>
-                    <!-- <td>{{ member.last_payment }}</td> -->
-                    <td>{{ member.expiry_date }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-
-    <div id="inactive" class="tab-content">
-        <table>
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Phone</th>
-                    <th>Plan</th>
-                    <!-- <th>Last Payment</th> -->
-                    <th>Expiry Date</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for member in inactive_members %}
-                <tr>
-                    <td>{{ member.name }}</td>
-                    <td>{{ member.phone }}</td>
-                    <td>{{ member.plan }}</td>
-                    <!-- <td>{{ member.last_payment }}</td> -->
-                    <td>{{ member.expiry_date }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-
-    <div id="expired" class="tab-content">
-        <table>
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Phone</th>
-                    <th>Plan</th>
-                    <!-- <th>Last Payment</th> -->
-                    <th>Expiry Date</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for member in expired_members %}
-                <tr>
-                    <td>{{ member.name }}</td>
-                    <td>{{ member.phone }}</td>
-                    <td>{{ member.plan }}</td>
-                    <!-- <td>{{ member.last_payment }}</td> -->
-                    <td>{{ member.expiry_date }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
     </div>
 
     <script src="{% static 'js/status.js' %}"></script>
-
 {% endblock %}
