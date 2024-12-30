@@ -29,51 +29,57 @@
     document.addEventListener('DOMContentLoaded', function() {
         const reminderContainer = document.getElementById('reminder-container');
         const filterButtons = document.querySelectorAll('.filter-btn');
-        
+
         function createReminderCard(reminder) {
-            let details = '';
-            let statusClass = '';
-            
-            if (reminder.type === 'attendance') {
-                statusClass = 'attendance-reminder';
-                details = `
-                    <p><strong>Days Since Last Visit:</strong> ${reminder.days_absent}</p>
-                    <p><strong>Status:</strong> Active Membership</p>
-                `;
-            } else if (reminder.type === 'subscription') {
-                statusClass = 'subscription-reminder';
-                const lastAttended = reminder.last_attended ? 
-                    new Date(reminder.last_attended).toLocaleDateString() : 'Never';
-                details = `
-                    <p><strong>Days Until Expiry:</strong> ${reminder.days_until_expiry}</p>
-                    <p><strong>Expiry Date:</strong> ${reminder.expiry_date}</p>
-                    <p><strong>Last Attended:</strong> ${lastAttended}</p>
-                `;
-            } else if (reminder.category) {
-                statusClass = 'sent-reminder';
-                details = `
-                    <p><strong>Message:</strong> ${reminder.reminder}</p>
-                    <p><strong>Sent On:</strong> ${reminder.sent_date}</p>
-                    <p><strong>Type:</strong> ${reminder.category}</p>
-                `;
-            }
-            
-            return `
-                <div class="reminder-card ${statusClass}">
-                    <div class="reminder-details">
-                        <h3>${reminder.name}</h3>
-                        ${details}
-                    </div>
-                    ${!reminder.category ? `
-                        <div class="reminder-action">
-                            <button class="btn send-reminder" data-member-id="${reminder.member_id}">
-                                Send Reminder
-                            </button>
-                        </div>
-                    ` : ''}
-                </div>
+        let details = '';
+        let statusClass = '';
+        
+        // Add phone number to the common information
+        const phoneInfo = `<p><strong>Phone:</strong> ${reminder.phone || 'Not provided'}</p>`;
+        
+        if (reminder.type === 'attendance') {
+            statusClass = 'attendance-reminder';
+            details = `
+                ${phoneInfo}
+                <p><strong>Days Since Last Visit:</strong> ${reminder.days_absent}</p>
+                <p><strong>Status:</strong> Active Membership</p>
+            `;
+        } else if (reminder.type === 'subscription') {
+            statusClass = 'subscription-reminder';
+            const lastAttended = reminder.last_attended ? 
+                new Date(reminder.last_attended).toLocaleDateString() : 'Never';
+            details = `
+                ${phoneInfo}
+                <p><strong>Days Until Expiry:</strong> ${reminder.days_until_expiry}</p>
+                <p><strong>Expiry Date:</strong> ${reminder.expiry_date}</p>
+                <p><strong>Last Attended:</strong> ${lastAttended}</p>
+            `;
+        } else if (reminder.category) {
+            statusClass = 'sent-reminder';
+            details = `
+                ${phoneInfo}
+                <p><strong>Message:</strong> ${reminder.reminder}</p>
+                <p><strong>Sent On:</strong> ${reminder.sent_date}</p>
+                <p><strong>Type:</strong> ${reminder.category}</p>
             `;
         }
+        
+        return `
+            <div class="reminder-card ${statusClass}">
+                <div class="reminder-details">
+                    <h3>${reminder.name}</h3>
+                    ${details}
+                </div>
+                ${!reminder.category ? `
+                    <div class="reminder-action">
+                        <button class="btn send-reminder" data-member-id="${reminder.member_id}">
+                            Send Reminder
+                        </button>
+                    </div>
+                ` : ''}
+            </div>
+        `;
+    }
         
         async function loadReminders(type) {
             try {

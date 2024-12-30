@@ -748,6 +748,7 @@ def reminders(request):
             reminders_data = [{
                 'member_id': reminder.member.id,
                 'name': f"{reminder.member.first_name} {reminder.member.last_name}",
+                'phone': reminder.member.phone_number,  # Added phone number
                 'reminder': reminder.reminder,
                 'sent_date': reminder.created_at.strftime('%Y-%m-%d'),
                 'category': reminder.get_category_display()
@@ -772,6 +773,7 @@ def reminders(request):
                     reminders_data.append({
                         'member_id': member.id,
                         'name': f"{member.first_name} {member.last_name}",
+                        'phone': member.phone_number,  # Added phone number
                         'type': 'attendance',
                         'days_absent': days_absent or 'Never attended'
                     })
@@ -799,6 +801,7 @@ def reminders(request):
                         reminders_data.append({
                             'member_id': member.id,
                             'name': f"{member.first_name} {member.last_name}",
+                            'phone': member.phone_number,  # Added phone number
                             'type': 'subscription',
                             'days_until_expiry': days_until_expiry,
                             'last_attended': last_checkin.timestamp if last_checkin else None,
@@ -827,6 +830,7 @@ def reminders(request):
                     attendance_data.append({
                         'member_id': member.id,
                         'name': f"{member.first_name} {member.last_name}",
+                        'phone': member.phone_number, 
                         'type': 'attendance',
                         'days_absent': days_absent or 'Never attended'
                     })
@@ -852,6 +856,7 @@ def reminders(request):
                         subscription_data.append({
                             'member_id': member.id,
                             'name': f"{member.first_name} {member.last_name}",
+                            'phone': member.phone_number, 
                             'type': 'subscription',
                             'days_until_expiry': days_until_expiry,
                             'last_attended': last_checkin.timestamp if last_checkin else None,
