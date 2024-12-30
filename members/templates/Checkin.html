@@ -8,14 +8,11 @@
 {% endblock %}
 
 {% block content %}
+    <div class="topbar">
+        <h1>Check-In / Check-Out</h1>
+    </div>
 
-    <div class="container" >
-
-        
-            <h1>Check-In / Check-Out</h1>
-
-        
-        
+    <div class="container">
         <div id="statusMessage" class="status-message" style="display: none;"></div>
         
         <input type="text" class="member-input" placeholder="Enter member phone number" id="memberIdInput">
@@ -24,7 +21,6 @@
             <button class="check-in-btn">Check In</button>
             <button class="check-out-btn">Check Out</button>
         </div>
-
 
         <div class="history-section">
             <h3>Check-In/Checkout History</h3>

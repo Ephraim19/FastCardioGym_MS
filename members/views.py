@@ -214,6 +214,15 @@ def save_member(request):
 
 
 
+PLAN_PRICES = {
+    'daily': 500,
+    'monthly': 4000,
+    'quarterly': 10500,
+    'biannually': 21000,
+    'annually': 42000,
+    'student': 3000
+}
+
 def save_payment(request, member_id=None):
     # Option 1: Use session to get member ID
     if member_id is None:
@@ -233,25 +242,53 @@ def save_payment(request, member_id=None):
             del request.session['new_member_id']
         
         plan = request.POST.get('plan')
-        amount = request.POST.get('amount')
+        amount = Decimal(request.POST.get('amount'))
         transaction_id = request.POST.get('code')
         
-        # Save the payment details
+        # Get expected amount for the chosen plan
+        expected_amount = PLAN_PRICES.get(plan)
+        
+        if expected_amount is None:
+            messages.error(request, 'Invalid plan selected!')
+            return redirect("Members")
+        
+        # Calculate difference between paid and expected amount
+        difference = amount - expected_amount
+        
+        # Update member's balance
+        member.update_balance(difference)
+        
+        # Create payment record
         PaymentDetails.objects.create(
             member=member,
             plan=plan,
             amount=amount,
             transaction_id=transaction_id
         )
-
-        # Set member as active when they make a payment
-        member.is_active = True
+        
+        # Update member status based on payment and balance
+        if amount >= expected_amount or (amount + member.balance >= expected_amount):
+            member.is_active = True
+            if difference > 0:
+                messages.success(request, 
+                    f'Overpayment of {difference:.2f} recorded. Current balance: {member.balance:.2f}')
+        else:
+            member.is_active = False
+            messages.warning(request, 
+                f'Underpayment of {abs(difference):.2f}. Current balance: {member.balance:.2f}. '
+                'Membership will not be activated until full payment is received.')
+        
         member.save()
         
-        messages.success(request, f'Payment saved successfully for {member}!')
+        # Determine appropriate success message
+        if member.is_active:
+            messages.success(request, 
+                f'Payment saved successfully for {member}! Membership has been activated.')
+        else:
+            messages.success(request, 
+                f'Payment saved successfully for {member}, but membership is inactive due to incomplete payment.')
         
-        return redirect("Members")
-    
+        return redirect("Members")    
     # Render payment form with member context
     return render(request, 'payment.html', {'member': member})
 

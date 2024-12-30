@@ -88,7 +88,6 @@ body {
   font-size: 1.5rem;
   font-weight: bold;
   margin-left: 25%;
-
 }
 
 /* Sidebar Menu */
@@ -125,15 +124,24 @@ body {
 /* Content Area */
 #content {
   flex: 1;
-  padding: 20px;
+  padding: var(--content-padding, 2rem);
   margin-left: 250px;
   transition: all 0.3s ease;
   background-color: #fff;
   min-height: 100vh;
+  width: calc(100% - 250px);
 }
 
 #content.expanded {
   margin-left: 0;
+  width: 100%;
+}
+
+/* Add consistent inner content padding */
+.content-inner {
+  padding: 1.5rem;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
 /* Scrollbar Styling */
@@ -157,18 +165,35 @@ body {
 /* Responsive Design */
 @media (max-width: 768px) {
   #sidebar {
-      z-index: 999;
+    z-index: 999;
   }
 
   #content {
-      margin-left: 0;
+    margin-left: 0;
+    width: 100%;
+    padding: var(--content-padding, 1rem);
   }
 
   #sidebar.collapsed {
-      transform: translateX(-250px);
+    transform: translateX(-250px);
   }
   
   .toggle-container {
-      left: 10px !important;
+    left: 10px !important;
+  }
+
+  .content-inner {
+    padding: 1rem;
+  }
+}
+
+/* Additional responsive breakpoints */
+@media (max-width: 480px) {
+  #content {
+    padding: var(--content-padding, 0.75rem);
+  }
+
+  .content-inner {
+    padding: 0.75rem;
   }
 }

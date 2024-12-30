@@ -11,10 +11,22 @@ class Member(models.Model):
     is_frozen = models.BooleanField(default=False)
     additional_info = models.TextField(blank=True,null=True)
     gender = models.CharField(max_length= 6)
-
+    balance = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        help_text="Positive balance indicates credit, negative indicates debt"
+    )
 
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
+
+    def update_balance(self, amount_difference):
+        
+        self.balance += amount_difference
+        self.save()
+
+
     
 class PaymentDetails(models.Model):
     # Payment plan options
@@ -33,6 +45,7 @@ class PaymentDetails(models.Model):
     amount = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Amount Paid")
     payment_date = models.DateField(default=timezone.now, verbose_name="Payment Date")
     transaction_id = models.CharField(max_length=100, blank=True, null=True, verbose_name="Transaction ID")
+    
     # notes = models.TextField(blank=True, null=True, verbose_name="Additional Notes")
 
     
