@@ -886,10 +886,19 @@ def freeze_member(request,member_id):
             freeze_time = freeze_time,
         )
         
-        messages.success(request, f'Membership for {member} has been frozen for days.')
+        messages.success(request, f'Membership for {member} has been frozen for {freeze_time} days.')
         return redirect('Members')
     
     return render(request, 'freeze.html')
+
+def unfreeze_member(request, member_id):
+    member = get_object_or_404(Member, id=member_id)
+    member.is_frozen = False
+    member.save()
+    
+    messages.success(request, f'Membership for {member} has been unfrozen')
+    return redirect('Members')
+    
 
 
 def expenses(request):

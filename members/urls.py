@@ -13,8 +13,9 @@ urlpatterns = [
     path('newmember/payment/<int:member_id>/', views.save_payment, name='Payment'),
     path('members/',views.members,name='Members'),
     path('members/<int:member_id>/',views.member_details,name='Member details'),
-    path('member/freeze/<int:member_id>/', views.freeze_member, name='freeze'),
     
+    path('member/freeze/<int:member_id>/', views.freeze_member, name='freeze'),
+    path('member/unfreeze/<int:member_id>/', views.unfreeze_member, name='unfreeze'),
     
     path('checkin/',views.checkin,name="Checkin" ),
     path('checkin/check-in-out/', views.check_in_out, name='check_in_out'),

@@ -13,16 +13,28 @@
             <div class="profile-header-left">
                 <h1>
                     {{ member.first_name }} {{ member.last_name }} -
+                    {% if balance < 0 %}
+                    <span style="font-size: medium;" class="status-badge status-{{ membership_status|lower }}">  Debt </span>
+                    {% else %}
                     <span style="font-size: medium;" class="status-badge status-{{ membership_status|lower }}">  {{ membership_status }}</span>
+                    {% endif %}
                 </h1>
                 
                 <div class="header-actions">
                     <a href="{% url 'Payment' member_id=member.id %}" class="status-badge status-{{ membership_status|lower }}">
                         <span>New Payment</span>
                     </a> 
-                    <a href="{% url 'freeze' member_id=member.id %}" class="status-badge status-{{ membership_status|lower }}">
-                        <span>Freeze</span>
-                    </a>
+                    
+                    {% if member.is_frozen %}
+                        <a href="{% url 'unfreeze' member_id=member.id %}" class="status-badge status-{{ membership_status|lower }}">
+                            <span>UnFreeze</span>
+                        </a>
+                    {% else %}
+                        <a href="{% url 'freeze' member_id=member.id %}" class="status-badge status-{{ membership_status|lower }}">
+                            <span>Freeze</span>
+                        </a>
+                    {% endif %}
+
                     <a href="{% url 'member_progress' member_id=member.id %}" class="status-badge status-{{ membership_status|lower }}">
                         <span>Progress</span>
                     </a>
