@@ -20,6 +20,15 @@ from decimal import Decimal
 from .fastcardio_report import create_fastcardio_report
 
 
+PLAN_PRICES = {
+    'daily': 500,
+    'monthly': 4000,
+    'quarterly': 10500,
+    'biannually': 21000,
+    'annually': 42000,
+    'student': 3000
+}
+
 def login_page(request):
     return render(request, 'index.html')
 
@@ -214,15 +223,6 @@ def save_member(request):
 
 
 
-PLAN_PRICES = {
-    'daily': 500,
-    'monthly': 4000,
-    'quarterly': 10500,
-    'biannually': 21000,
-    'annually': 42000,
-    'student': 3000
-}
-
 def save_payment(request, member_id=None):
     # Option 1: Use session to get member ID
     if member_id is None:
@@ -233,9 +233,7 @@ def save_payment(request, member_id=None):
         member = get_object_or_404(Member, id=member_id)
     except:
         return HttpResponse("Member not found")
-    
-    print(f"Member for payment: {member}")
-    
+        
     if request.method == "POST":
         # Remove session variable after use
         if 'new_member_id' in request.session:
@@ -248,15 +246,9 @@ def save_payment(request, member_id=None):
         # Get expected amount for the chosen plan
         expected_amount = PLAN_PRICES.get(plan)
         
-        if expected_amount is None:
+        if expected_amount is None and plan != 'complete':
             messages.error(request, 'Invalid plan selected!')
             return redirect("Members")
-        
-        # Calculate difference between paid and expected amount
-        difference = amount - expected_amount
-        
-        # Update member's balance
-        member.update_balance(difference)
         
         # Create payment record
         PaymentDetails.objects.create(
@@ -266,18 +258,32 @@ def save_payment(request, member_id=None):
             transaction_id=transaction_id
         )
         
+        # Calculate difference between paid and expected amount
+        print(member.balance)
+        if plan == 'complete':
+            difference = amount + member.balance
+            print(difference,amount, member.balance)
+            member.balance = difference
+            member.save()
+        else:
+            difference = amount - expected_amount
+            member.balance = difference
+            member.save()
+        
         # Update member status based on payment and balance
-        if amount >= expected_amount or (amount + member.balance >= expected_amount):
+        if plan != 'complete':
+         if amount >= expected_amount or (amount + member.balance >= expected_amount) :
             member.is_active = True
             if difference > 0:
                 messages.success(request, 
                     f'Overpayment of {difference:.2f} recorded. Current balance: {member.balance:.2f}')
-        else:
+         else:
             member.is_active = False
             messages.warning(request, 
-                f'Underpayment of {abs(difference):.2f}. Current balance: {member.balance:.2f}. '
-                'Membership will not be activated until full payment is received.')
-        
+                f'Underpayment of {abs(difference):.2f}. Current balance: {member.balance:.2f}.')
+        else:
+            member.is_active = True
+            messages.success(request, f'Complete payment of {amount:.2f} recorded.Your balance is {member.balance:.2f} Membership activated.')
         member.save()
         
         # Determine appropriate success message
@@ -427,6 +433,14 @@ def member_details(request, member_id):
         action='check_in'
     ).order_by('-timestamp').first()
 
+    # Get balance status message
+    if member.balance > 0:
+        balance_status = "Credit"
+    elif member.balance < 0:
+        balance_status = "Debt"
+    else:
+        balance_status = "Neutral"
+
     context = {
         'member': member,
         'recent_payments': recent_payments,
@@ -438,7 +452,9 @@ def member_details(request, member_id):
         'total_checkins': total_checkins,
         'checkins_this_month': checkins_this_month,
         'last_checkin': last_checkin,
-        'current_plan': latest_payment.plan if latest_payment else "No active plan"
+        'current_plan': latest_payment.plan if latest_payment else "No active plan",
+        'balance': member.balance,
+        'balance_status': balance_status,
     }
     
     return render(request, 'member_details.html', context)

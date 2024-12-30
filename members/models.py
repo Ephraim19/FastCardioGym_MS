@@ -21,10 +21,9 @@ class Member(models.Model):
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
 
-    def update_balance(self, amount_difference):
-        
-        self.balance += amount_difference
-        self.save()
+    # def update_balance(self, amount_difference):
+    #     self.balance += amount_difference
+    #     self.save()
 
 
     
@@ -37,6 +36,7 @@ class PaymentDetails(models.Model):
         ('biannually', 'Biannually'),
         ('annually', 'Annually'),
         ('student', 'Student Package'),
+        ('complete', 'Complete Payment'),
     ]
     
     # Fields for the payment details

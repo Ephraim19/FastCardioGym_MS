@@ -12,8 +12,8 @@
         <div class="profile-header">
             <div class="profile-header-left">
                 <h1>
-                    {{ member.first_name }} {{ member.last_name }}
-                    <span class="status-badge status-{{ membership_status|lower }}">{{ membership_status }}</span>
+                    {{ member.first_name }} {{ member.last_name }} -
+                    <span style="font-size: medium;" class="status-badge status-{{ membership_status|lower }}">  {{ membership_status }}</span>
                 </h1>
                 
                 <div class="header-actions">
@@ -54,6 +54,7 @@
                 </div>
                 <ul class="info-list">
                     <li><span class="label">Current Plan:</span> {{ current_plan|title }}</li>
+                    <li><span class="label">Balance(Ksh):</span> {{balance|floatformat:2}}</li>
                     <li><span class="label">Member Since:</span> {{ member.date_joined|date:"F d, Y" }}</li>
                     {% if last_checkin %}
                     <li><span class="label">Last Check-in:</span> {{ last_checkin.timestamp|date:"F d, Y" }} at {{ last_checkin.timestamp|time:"g:i A" }}</li>
@@ -72,6 +73,7 @@
                     {% endif %}
                 </ul>
             </div>
+
 
             <div class="profile-section">
                 <h2>Recent Payments</h2>
