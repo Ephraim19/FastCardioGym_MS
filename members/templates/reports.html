@@ -8,43 +8,54 @@
 {% endblock %}
 
 {% block content %}
-    <!-- <nav class="sidebar">
-        <div class="sidebar-logo">FastCardio</div>
-        <ul class="sidebar-menu">
-            <li><a href="{% url 'Dashboard' %}">Dashboard</a></li>
-            <li><a href="{% url 'New member' %}">New member</a></li>
-            <li><a href="{% url 'Members' %}">All members</a></li>
-            <li><a href="{% url 'Checkin' %}">Checkin/Checkout</a></li>
-            <li><a href="{% url 'Finance' %}">Finance</a></li>
-            <li><a href="{% url 'Reminders' %}">Reminders</a></li>
-            <li><a href="{% url 'Expenses' %}">Expenses</a></li>
-            <li><a href="{% url 'Reports' %}" class="active">Reports</a></li>
-            <li><a href="{% url 'Log out' %}">Log out</a></li>
-        </ul>
-    </nav> -->
-
-    <!-- <main class="main-content"> -->
     <main>
         <div class="dashboard-header">
-            <h1 class="dashboard-title">System Report</h1>
-            <button class="download-btn">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                </svg>
-                Download Report
-            </button>
+
+            <div class="header-left">
+                <h1 class="dashboard-title">System Report</h1>
+                <div class="date-filters">
+                    <div class="filter-group">
+                        <label for="start-date">Start Date:</label>
+                        <input type="date" 
+                        id="start-date" 
+                        class="date-input"
+                        name="start-date" 
+                        min="2024-11-30" 
+                        max="2025-12-31"
+                        value="2024-11-30"
+                        >
+                    </div>
+                    <div class="filter-group">
+                        <label for="end-date">End Date:</label>
+                        <input type="date" 
+                        id="end-date"
+                         class="date-input"
+                         name="end-date" 
+                         min="2024-11-20" 
+                         max="2025-12-31"
+                         value="2024-12-31"
+                         >
+                    </div>
+                    <button class="download-btn">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                        Download report
+                   </button>
+                </div>
+            </div>
         </div>
 
         <div class="stats-grid">
-            <div class="stat-card">
+            <div class="subscription-card total">
                 <h3>All Members</h3>
-                <div class="number">{{ total_members }}</div>
-                <div class="sub-text positive-change">+{{ new_members_this_month }} this month</div>
+                <div class="amount">{{ total_members }}</div>
+                <div class="subscribers"> +{{ new_members_this_month }} this month</div>
             </div>
             <div class="stat-card">
                 <h3>Active Members</h3>
                 <div class="number">{{ active_members }}</div>
-                <div class="sub-text positive-change">+{{ new_active_this_month }} this month</div>
+                <div class="sub-text">+{{ new_active_this_month }} this month</div>
             </div>
             <div class="stat-card">
                 <h3>Active Check-ins</h3>

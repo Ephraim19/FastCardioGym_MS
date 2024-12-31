@@ -1041,51 +1041,75 @@ def get_progress_history(request, member_id):
 
 
 def reports(request):
-    today = timezone.now().date()
-    thirty_days_ago = today - timedelta(days=30)
-
-    # Get basic member statistics
-    total_members = Member.objects.count()
-    active_members = Member.objects.filter(is_active=True, is_frozen=False).count()
-    new_members_this_month = Member.objects.filter(
-        date_joined__date__gte=thirty_days_ago
+    try:
+        start_date = request.GET.get('start_date')
+        end_date = request.GET.get('end_date')
+        
+        start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+        end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+    except:
+        end_date = timezone.now().date()
+        start_date = end_date - timedelta(days=30)
+    
+    # Get basic member statistics with date filtering
+    total_members = Member.objects.filter(
+        date_joined__date__lte=end_date
     ).count()
+
+    active_members = Member.objects.filter(
+        date_joined__date__lte=end_date,
+        is_active=True,
+        is_frozen=False
+    ).count()
+
+    new_members_this_month = Member.objects.filter(
+        date_joined__date__gte=start_date,
+        date_joined__date__lte=end_date
+    ).count()
+
     new_active_this_month = Member.objects.filter(
-        date_joined__date__gte=thirty_days_ago,
+        date_joined__date__gte=start_date,
+        date_joined__date__lte=end_date,
         is_active=True
     ).count()
-
-    # Get check-in statistics
+    
+    # Get check-in statistics for the selected date range
     active_checkins = CheckInOutRecord.objects.filter(
         action='check_in',
-        timestamp__date=today
+        timestamp__date=end_date
     ).count()
-
-    # Calculate members not attending (no check-ins in last week)
-    one_week_ago = today - timedelta(days=7)
+    
+    # Calculate members not attending based on the date range
+    one_week_ago = end_date - timedelta(days=7)
     attending_member_ids = CheckInOutRecord.objects.filter(
         action='check_in',
-        timestamp__date__gte=one_week_ago
+        timestamp__date__gte=one_week_ago,
+        timestamp__date__lte=end_date
     ).values_list('member_id', flat=True).distinct()
     
-    not_attending = Member.objects.exclude(
+    not_attending = Member.objects.filter(
+        date_joined__date__lte=end_date,
+        is_active=True
+    ).exclude(
         id__in=attending_member_ids
-    ).filter(is_active=True).count()
-
-    # Get revenue statistics
+    ).count()
+    
+    # Get revenue statistics for the date range
     revenue_data = PaymentDetails.objects.filter(
-        payment_date__gte=thirty_days_ago
+        payment_date__gte=start_date,
+        payment_date__lte=end_date
     ).aggregate(
         total_revenue=Sum('amount'),
         total_subscriptions=Count('id')
     )
-
-    # Get subscription breakdowns
+    
+    # Get subscription breakdowns for the date range
     subscription_data = {}
     for plan in PaymentDetails.PLAN_CHOICES:
         plan_data = PaymentDetails.objects.filter(
             plan=plan[0],
-            payment_date__gte=thirty_days_ago
+            payment_date__gte=start_date,
+            payment_date__lte=end_date
         ).aggregate(
             amount=Sum('amount'),
             subscribers=Count('id')
@@ -1094,7 +1118,7 @@ def reports(request):
             'amount': plan_data['amount'] or 0,
             'subscribers': plan_data['subscribers']
         }
-
+    
     context = {
         # Member statistics
         'total_members': total_members,
@@ -1103,11 +1127,11 @@ def reports(request):
         'new_active_this_month': new_active_this_month,
         'active_checkins': active_checkins,
         'not_attending': not_attending,
-
+        
         # Revenue statistics
         'total_revenue': revenue_data['total_revenue'] or 0,
         'total_subscriptions': revenue_data['total_subscriptions'] or 0,
-
+        
         # Subscription breakdowns
         'daily_subscription_amount': subscription_data['daily']['amount'],
         'daily_subscribers': subscription_data['daily']['subscribers'],
@@ -1122,10 +1146,12 @@ def reports(request):
         'student_subscription_amount': subscription_data['student']['amount'],
         'student_subscribers': subscription_data['student']['subscribers'],
     }
-
+    
+    # Check if it's an AJAX request
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse(context)
+    
     return render(request, "reports.html", context)
-
-
 
 def get_historical_data(model, date_field, value_field=None, months=6, filters=None):
     """
