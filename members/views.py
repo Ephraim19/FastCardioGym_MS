@@ -32,50 +32,31 @@ PLAN_PRICES = {
 def login_page(request):
     return render(request, 'index.html')
 
-
 def custom_authenticate(request):
-    if request.method == "POST":
-        username = request.POST.get('username')
-        password = request.POST.get('password')
+    if request.method != "POST":
+        return redirect('login')
         
-        # Check if username or password is empty
-        if not username or not password:
-            messages.error(request, 'Username and password are required.')
-            return render(request, 'index.html')
-        
-        try:
-            # First, attempt to get the user
-            user = User.objects.get(username=username)
-            
-            # Verify the password
-            if user.is_superuser and user.check_password(password):
-                # Use Django's built-in authentication
-                auth_user = authenticate(request, username=username, password=password)
-                
-                if auth_user is not None:
-                    login(request, auth_user)
-                    # messages.success(request, 'Successfully logged in!')
-                    return redirect('Dashboards')  
-                else:
-                    messages.error(request, 'Authentication failed.')
-            else:
-                messages.error(request, 'Invalid login credentials or insufficient permissions.')
-        
-        except User.DoesNotExist:
-            messages.error(request, 'User does not exist.')
-        
-        # If login fails, return to the login page with error messages
-        return render(request, 'index.html')
+    username = request.POST.get('username')
+    print(username)
+    password = request.POST.get('password')
     
-    # If not a POST request, just render the login page
-    return render(request, 'index.html')
+    if not username or not password:
+        messages.error(request, 'Username and password are required.')
+        return redirect('login')
+    
+    user = authenticate(request, username=username, password=password)
+    
+    if user is not None and user.is_superuser:
+        login(request, user)
+        return redirect('Dashboard')
+    
+    messages.error(request, 'Invalid credentials or insufficient permissions.')
+    return redirect('login')
 
 
 def custom_logout(request):
     logout(request)
     return redirect('login') 
-
-
 
 def dashboard(request):
     today = timezone.now().date()
