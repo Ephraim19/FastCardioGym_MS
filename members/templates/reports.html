@@ -1,7 +1,7 @@
 {% extends 'sidebar.html' %}
 {% load static %}
 
-{% block title %}Fastcardio - Report{% endblock %}
+{% block title %}Fastcardio - Member Reports{% endblock %}
 
 {% block extra_styles %}
     <link rel="stylesheet" href="{% static 'reports.css' %}">
@@ -10,64 +10,113 @@
 {% block content %}
     <main>
         <div class="dashboard-header">
-
             <div class="header-left">
-                <h1 class="dashboard-title">System Report</h1>
+                <h1 class="dashboard-title">Member Report</h1>
                 <div class="date-filters">
                     <div class="filter-group">
                         <label for="start-date">Start Date:</label>
                         <input type="date" 
-                        id="start-date" 
-                        class="date-input"
-                        name="start-date" 
-                        min="2024-11-30" 
-                        max="2025-12-31"
-                        value="2024-11-30"
-                        >
+                            id="start-date" 
+                            class="date-input"
+                            name="start-date" 
+                            min="2024-11-30" 
+                            max="2025-12-31"
+                            value="2024-11-30">
                     </div>
                     <div class="filter-group">
                         <label for="end-date">End Date:</label>
                         <input type="date" 
-                        id="end-date"
-                         class="date-input"
-                         name="end-date" 
-                         min="2024-11-20" 
-                         max="2025-12-31"
-                         value="2024-12-31"
-                         >
+                            id="end-date"
+                            class="date-input"
+                            name="end-date" 
+                            min="2024-11-20" 
+                            max="2025-12-31"
+                            value="2024-12-31">
                     </div>
                     <button class="download-btn">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                         </svg>
                         Download report
-                   </button>
+                    </button>
                 </div>
             </div>
         </div>
 
+        <h2 class="section-title">Members Overview</h2>
+        
         <div class="stats-grid">
             <div class="subscription-card total">
-                <h3>All Members</h3>
+                <h3>Total Members</h3>
                 <div class="amount">{{ total_members }}</div>
-                <div class="subscribers"> +{{ new_members_this_month }} this month</div>
+                <div class="subscribers">+{{ new_members_this_month }} new in period</div>
+                <div class="subscribers">{{ retention_rate }}% retention rate</div>
             </div>
             <div class="stat-card">
                 <h3>Active Members</h3>
                 <div class="number">{{ active_members }}</div>
-                <div class="sub-text">+{{ new_active_this_month }} this month</div>
+                <div class="sub-text">{{ active_percentage }}% of total</div>
+                <!-- <div class="sub-text">{{ avg_membership_days }} days avg membership</div> -->
             </div>
             <div class="stat-card">
-                <h3>Active Check-ins</h3>
-                <div class="number">{{ active_checkins }}</div>
-                <div class="sub-text">Today</div>
+                <h3>Frozen Members</h3>
+                <div class="number">{{ frozen_members }}</div>
+                <div class="sub-text">{{ avg_freeze_duration }} days avg freeze</div>
+                <!-- <div class="sub-text">{{ avg_freezes_per_member }} freezes per member</div> -->
             </div>
             <div class="stat-card">
-                <h3>Not Attending</h3>
-                <div class="number">{{ not_attending }}</div>
-                <div class="sub-text">1 week inactive</div>
+                <h3>Inactive Members</h3>
+                <div class="number">{{ inactive_members }}</div>
+                <div class="sub-text">{{ inactive_percentage }}% of total</div>
+                <div class="sub-text">{{ not_attending }} not attending</div>
             </div>
         </div>
+
+        <h2 class="section-title">Attendance Insights</h2>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>Daily Check-ins</h3>
+                <div class="number">{{ avg_daily_checkins }}</div>
+                <div class="sub-text">Average daily visits</div>
+            </div>
+            <div class="stat-card">
+                <h3>Peak Hours</h3>
+                <div class="number">{{ peak_hour_start }} - {{ peak_hour_end }}</div>
+                <div class="sub-text">{{ peak_hour_percentage }}% of check-ins</div>
+            </div>
+            <div class="stat-card">
+                <h3>Demographics</h3>
+                <div class="number">{{ male_percentage }}% Male</div>
+                <div class="sub-text">{{ female_percentage }}% Female</div>
+            </div>
+            <div class="stat-card">
+                <h3>Member Progress</h3>
+                <div class="number">{{ members_with_weight_loss }}</div>
+                <div class="sub-text">Members losing weight</div>
+                <div class="sub-text">{{ members_with_fat_loss }} reducing body fat</div>
+            </div>
+        </div>
+
+        <h2 class="section-title">Progress Metrics</h2>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>Physical Progress</h3>
+                <div class="number">{{ avg_measurements_per_member }}</div>
+                <div class="sub-text">Avg measurements per member</div>
+            </div>
+            <div class="stat-card">
+                <h3>Average Metrics</h3>
+                <div class="sub-text">Weight: {{ avg_weight }} kg</div>
+                <div class="sub-text">Body Fat: {{ avg_body_fat }}%</div>
+                <div class="sub-text">Muscle Mass: {{ avg_muscle_mass }}kg</div>
+            </div>
+            <div class="stat-card">
+                <h3>Body Measurements</h3>
+                <div class="sub-text">Chest: {{ avg_chest }}cm</div>
+                <div class="sub-text">Waist: {{ avg_waist }}cm</div>
+            </div>
+        </div>
+
 
         <h2 class="section-title">Revenue Overview</h2>
         <div class="subscription-grid">
@@ -107,8 +156,27 @@
                 <div class="subscribers">{{ student_subscribers }} subscribers</div>
             </div>
         </div>
+
+        <h2 class="section-title">Financial Overview</h2>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>Member Balances</h3>
+                <div class="number">Ksh {{ avg_member_balance|floatformat:2 }}</div>
+                <div class="sub-text">Average balance</div>
+            </div>
+            <div class="stat-card">
+                <h3>Credits & Debts</h3>
+                <div class="sub-text">Total Credit: Ksh {{ total_member_credit|floatformat:2 }}</div>
+                <div class="sub-text">Total Debt: Ksh {{ total_member_debt|floatformat:2 }}</div>
+            </div>
+            <div class="stat-card">
+                <h3>Payment Stats</h3>
+                <div class="sub-text">Avg Payment: Ksh {{ avg_payment_amount|floatformat:2 }}</div>
+                <div class="sub-text">Max Payment: Ksh {{ max_payment_amount|floatformat:2 }}</div>
+            </div>
+        </div>
+        
     </main>
 
     <script src="{% static 'js/report.js' %}"></script>
-    
 {% endblock %}

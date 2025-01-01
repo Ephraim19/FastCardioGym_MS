@@ -3,7 +3,7 @@ from django.http import HttpResponse, JsonResponse
 from django.contrib.auth.models import User
 from .models import Member, PaymentDetails, CheckInOutRecord, gym_reminder, Freeze_member, Expense, MemberProgress
 from django.contrib import messages
-from django.db.models import Sum, Count
+from django.db.models import Count, Avg, Sum, Max, Min, F, Q, ExpressionWrapper, FloatField
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from django.core.paginator import Paginator
@@ -12,8 +12,8 @@ from django.views import View
 from django.utils.dateparse import parse_date
 from django.utils import timezone
 from datetime import timedelta,datetime
-from django.db.models.functions import TruncMonth
-from django.db.models import Count, Q, Max, Subquery, OuterRef
+from django.db.models.functions import TruncMonth, ExtractHour, ExtractWeekDay
+from django.db.models import Count, Q, Max, Subquery, OuterRef, Avg, Min
 from django.contrib.auth.decorators import login_required
 import json
 from decimal import Decimal
@@ -1021,6 +1021,268 @@ def get_progress_history(request, member_id):
     return JsonResponse(data)
 
 
+def create_reports(start_date, end_date):
+
+    # Basic member statistics with proper date range
+    total_members = Member.objects.filter(
+        date_joined__date__range=[start_date, end_date]
+    ).count()
+
+    new_members_this_month = Member.objects.filter(
+        date_joined__date__range=[start_date, end_date]
+    ).count()
+
+    active_members = Member.objects.filter(
+        date_joined__date__range=[start_date, end_date],
+        is_active=True,
+        is_frozen=False
+    ).count()
+
+    frozen_members = Member.objects.filter(
+        date_joined__date__range=[start_date, end_date],
+        is_frozen=True
+    ).count()
+
+    inactive_members = Member.objects.filter(
+        date_joined__date__range=[start_date, end_date],
+        is_active=False,
+        is_frozen=False
+    ).count()
+
+    # Calculate percentages
+    total_period_members = total_members or 1  # Avoid division by zero
+    active_percentage = round((active_members / total_period_members * 100), 1)
+    inactive_percentage = round((inactive_members / total_period_members * 100), 1)
+
+    # Enhanced Member Analysis
+    membership_duration = Member.objects.filter(
+        date_joined__date__range=[start_date, end_date],
+        is_active=True
+    ).annotate(
+        duration=ExpressionWrapper(
+            end_date - F('date_joined__date'),
+            output_field=FloatField()
+        )
+    ).aggregate(
+        avg_duration=Avg('duration'),
+        max_duration=Max('duration')
+    )
+
+    avg_membership_days = round(membership_duration['avg_duration'] or 0)
+    longest_membership_days = round(membership_duration['max_duration'] or 0)
+
+    # Attendance Analysis
+    checkins = CheckInOutRecord.objects.filter(
+        action='check_in',
+        timestamp__date__range=[start_date, end_date]
+    )
+    
+    total_days = (end_date - start_date).days + 1
+    avg_daily_checkins = round(checkins.count() / total_days if total_days > 0 else 0)
+
+    # Peak hours analysis
+    checkins_by_hour = checkins.annotate(
+        hour=ExtractHour('timestamp')
+    ).values('hour').annotate(
+        count=Count('id')
+    ).order_by('-count')
+    
+    if checkins_by_hour:
+        peak_hour = checkins_by_hour[0]['hour']
+        peak_hour_start = f"{peak_hour:02d}:00"
+        peak_hour_end = f"{(peak_hour + 1):02d}:00"
+        peak_hour_percentage = round(checkins_by_hour[0]['count'] / checkins.count() * 100 if checkins.count() > 0 else 0)
+    else:
+        peak_hour_start = "00:00"
+        peak_hour_end = "00:00"
+        peak_hour_percentage = 0
+
+    # Busiest days analysis
+    weekday_distribution = checkins.annotate(
+        weekday=ExtractWeekDay('timestamp')
+    ).values('weekday').annotate(
+        count=Count('id')
+    ).order_by('-count')
+    
+    busiest_day = weekday_distribution.first()
+
+    # Not attending calculation - modified to consider date range
+    attending_member_ids = checkins.values_list('member_id', flat=True).distinct()
+    
+    not_attending = Member.objects.filter(
+        date_joined__date__range=[start_date, end_date],
+        is_active=True
+    ).exclude(
+        id__in=attending_member_ids
+    ).count()
+
+    # Retention rate calculation
+    previous_period_start = start_date - timedelta(days=total_days)
+    previous_period_members = Member.objects.filter(
+        date_joined__date__range=[previous_period_start, start_date],
+        is_active=True
+    ).count()
+    
+    still_active_members = Member.objects.filter(
+        date_joined__date__range=[previous_period_start, start_date],
+        is_active=True
+    ).filter(
+        is_active=True
+    ).count()
+    
+    retention_rate = round((still_active_members / previous_period_members * 100) if previous_period_members > 0 else 0, 1)
+
+    # Gender distribution - modified to consider date range
+    gender_stats = Member.objects.filter(
+        date_joined__date__range=[start_date, end_date]
+    ).values('gender').annotate(
+        count=Count('id')
+    )
+    
+    total_with_gender = sum(stat['count'] for stat in gender_stats)
+    male_percentage = round(next((stat['count'] for stat in gender_stats if stat['gender'].lower() == 'male'), 0) / total_with_gender * 100 if total_with_gender > 0 else 0, 1)
+    female_percentage = round(next((stat['count'] for stat in gender_stats if stat['gender'].lower() == 'female'), 0) / total_with_gender * 100 if total_with_gender > 0 else 0, 1)
+
+    # Progress Analytics
+    progress_stats = MemberProgress.objects.filter(
+        date__range=[start_date, end_date]
+    ).aggregate(
+        avg_weight=Avg('weight'),
+        avg_body_fat=Avg('body_fat'),
+        avg_muscle_mass=Avg('muscle_mass'),
+        avg_chest=Avg('chest'),
+        avg_waist=Avg('waist')
+    )
+
+    # Progress Tracking Engagement
+    progress_tracking = MemberProgress.objects.filter(
+        date__range=[start_date, end_date]
+    ).values('member').annotate(
+        measurements=Count('id'),
+        weight_change=Max('weight') - Min('weight'),
+        body_fat_change=Max('body_fat') - Min('body_fat')
+    ).aggregate(
+        avg_measurements=Avg('measurements'),
+        positive_weight_change=Count('weight_change', filter=Q(weight_change__lt=0)),
+        positive_body_fat_change=Count('body_fat_change', filter=Q(body_fat_change__lt=0))
+    )
+
+    # Member balance analysis - modified to consider date range
+    balance_stats = Member.objects.filter(
+        date_joined__date__range=[start_date, end_date]
+    ).aggregate(
+        total_credit=Sum('balance', filter=Q(balance__gt=0)),
+        total_debt=Sum('balance', filter=Q(balance__lt=0)),
+        avg_balance=Avg('balance')
+    )
+
+    # Freeze patterns
+    freeze_analysis = Freeze_member.objects.filter(
+        frozen_date__range=[start_date, end_date]
+    ).values('member').annotate(
+        total_freezes=Count('id'),
+        total_freeze_time=Sum('freeze_time')
+    ).aggregate(
+        avg_freezes_per_member=Avg('total_freezes'),
+        avg_freeze_time=Avg('total_freeze_time'),
+        max_freeze_time=Max('total_freeze_time')
+    )
+
+    # Revenue Analysis
+    revenue_data = PaymentDetails.objects.filter(
+        payment_date__range=[start_date, end_date]
+    ).aggregate(
+        total_revenue=Sum('amount'),
+        total_subscriptions=Count('id'),
+        avg_payment=Avg('amount'),
+        max_payment=Max('amount')
+    )
+
+    # Payment Plan Distribution
+    plan_distribution = {}
+    for plan_code, plan_name in PaymentDetails.PLAN_CHOICES:
+        plan_data = PaymentDetails.objects.filter(
+            plan=plan_code,
+            payment_date__range=[start_date, end_date]
+        ).aggregate(
+            amount=Sum('amount'),
+            subscribers=Count('id')
+        )
+        plan_distribution[plan_code] = {
+            'amount': plan_data['amount'] or 0,
+            'subscribers': plan_data['subscribers']
+        }
+
+    context = {
+        # Member Statistics
+        'total_members': total_members,
+        'new_members_this_month': new_members_this_month,
+        'active_members': active_members,
+        'active_percentage': active_percentage,
+        'frozen_members': frozen_members,
+        'inactive_members': inactive_members,
+        'inactive_percentage': inactive_percentage,
+        'avg_membership_days': avg_membership_days,
+        'longest_membership_days': longest_membership_days,
+        
+        # Attendance Stats
+        'avg_daily_checkins': avg_daily_checkins,
+        'peak_hour_start': peak_hour_start,
+        'peak_hour_end': peak_hour_end,
+        'peak_hour_percentage': peak_hour_percentage,
+        'busiest_weekday': busiest_day['weekday'] if busiest_day else None,
+        'not_attending': not_attending,
+        'retention_rate': retention_rate,
+        
+        # Demographics
+        'male_percentage': male_percentage,
+        'female_percentage': female_percentage,
+        
+        # Progress Metrics
+        'avg_weight': round(progress_stats['avg_weight'] or 0, 1),
+        'avg_body_fat': round(progress_stats['avg_body_fat'] or 0, 1),
+        'avg_muscle_mass': round(progress_stats['avg_muscle_mass'] or 0, 1),
+        'avg_chest': round(progress_stats['avg_chest'] or 0, 1),
+        'avg_waist': round(progress_stats['avg_waist'] or 0, 1),
+        
+        # Progress Engagement
+        'avg_measurements_per_member': round(progress_tracking['avg_measurements'] or 0, 1),
+        'members_with_weight_loss': progress_tracking['positive_weight_change'],
+        'members_with_fat_loss': progress_tracking['positive_body_fat_change'],
+        
+        # Financial Stats
+        'total_member_credit': round(balance_stats['total_credit'] or 0, 2),
+        'total_member_debt': round(abs(balance_stats['total_debt'] or 0), 2),
+        'avg_member_balance': round(balance_stats['avg_balance'] or 0, 2),
+        
+        # Freeze Stats
+        'avg_freezes_per_member': round(freeze_analysis['avg_freezes_per_member'] or 0, 1),
+        'avg_freeze_duration': round(freeze_analysis['avg_freeze_time'] or 0),
+        'max_freeze_duration': round(freeze_analysis['max_freeze_time'] or 0),
+        
+        # Revenue Stats
+        'total_revenue': revenue_data['total_revenue'] or 0,
+        'total_subscriptions': revenue_data['total_subscriptions'],
+        'avg_payment_amount': round(revenue_data['avg_payment'] or 0, 2),
+        'max_payment_amount': round(revenue_data['max_payment'] or 0, 2),
+        
+        # Plan Distribution
+        'daily_subscription_amount': plan_distribution['daily']['amount'],
+        'daily_subscribers': plan_distribution['daily']['subscribers'],
+        'monthly_subscription_amount': plan_distribution['monthly']['amount'],
+        'monthly_subscribers': plan_distribution['monthly']['subscribers'],
+        'quarterly_subscription_amount': plan_distribution['quarterly']['amount'],
+        'quarterly_subscribers': plan_distribution['quarterly']['subscribers'],
+        'biannual_subscription_amount': plan_distribution['biannually']['amount'],
+        'biannual_subscribers': plan_distribution['biannually']['subscribers'],
+        'annual_subscription_amount': plan_distribution['annually']['amount'],
+        'annual_subscribers': plan_distribution['annually']['subscribers'],
+        'student_subscription_amount': plan_distribution['student']['amount'],
+        'student_subscribers': plan_distribution['student']['subscribers']
+    }
+    
+    return context
+
 def reports(request):
     try:
         start_date = request.GET.get('start_date')
@@ -1028,295 +1290,42 @@ def reports(request):
         
         start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
         end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+        
     except:
         end_date = timezone.now().date()
         start_date = end_date - timedelta(days=30)
     
-    # Get basic member statistics with date filtering
-    total_members = Member.objects.filter(
-        date_joined__date__lte=end_date
-    ).count()
-
-    active_members = Member.objects.filter(
-        date_joined__date__lte=end_date,
-        is_active=True,
-        is_frozen=False
-    ).count()
-
-    new_members_this_month = Member.objects.filter(
-        date_joined__date__gte=start_date,
-        date_joined__date__lte=end_date
-    ).count()
-
-    new_active_this_month = Member.objects.filter(
-        date_joined__date__gte=start_date,
-        date_joined__date__lte=end_date,
-        is_active=True
-    ).count()
-    
-    # Get check-in statistics for the selected date range
-    active_checkins = CheckInOutRecord.objects.filter(
-        action='check_in',
-        timestamp__date=end_date
-    ).count()
-    
-    # Calculate members not attending based on the date range
-    one_week_ago = end_date - timedelta(days=7)
-    attending_member_ids = CheckInOutRecord.objects.filter(
-        action='check_in',
-        timestamp__date__gte=one_week_ago,
-        timestamp__date__lte=end_date
-    ).values_list('member_id', flat=True).distinct()
-    
-    not_attending = Member.objects.filter(
-        date_joined__date__lte=end_date,
-        is_active=True
-    ).exclude(
-        id__in=attending_member_ids
-    ).count()
-    
-    # Get revenue statistics for the date range
-    revenue_data = PaymentDetails.objects.filter(
-        payment_date__gte=start_date,
-        payment_date__lte=end_date
-    ).aggregate(
-        total_revenue=Sum('amount'),
-        total_subscriptions=Count('id')
-    )
-    
-    # Get subscription breakdowns for the date range
-    subscription_data = {}
-    for plan in PaymentDetails.PLAN_CHOICES:
-        plan_data = PaymentDetails.objects.filter(
-            plan=plan[0],
-            payment_date__gte=start_date,
-            payment_date__lte=end_date
-        ).aggregate(
-            amount=Sum('amount'),
-            subscribers=Count('id')
-        )
-        subscription_data[plan[0]] = {
-            'amount': plan_data['amount'] or 0,
-            'subscribers': plan_data['subscribers']
-        }
-    
-    context = {
-        # Member statistics
-        'total_members': total_members,
-        'active_members': active_members,
-        'new_members_this_month': new_members_this_month,
-        'new_active_this_month': new_active_this_month,
-        'active_checkins': active_checkins,
-        'not_attending': not_attending,
-        
-        # Revenue statistics
-        'total_revenue': revenue_data['total_revenue'] or 0,
-        'total_subscriptions': revenue_data['total_subscriptions'] or 0,
-        
-        # Subscription breakdowns
-        'daily_subscription_amount': subscription_data['daily']['amount'],
-        'daily_subscribers': subscription_data['daily']['subscribers'],
-        'monthly_subscription_amount': subscription_data['monthly']['amount'],
-        'monthly_subscribers': subscription_data['monthly']['subscribers'],
-        'quarterly_subscription_amount': subscription_data['quarterly']['amount'],
-        'quarterly_subscribers': subscription_data['quarterly']['subscribers'],
-        'biannual_subscription_amount': subscription_data['biannually']['amount'],
-        'biannual_subscribers': subscription_data['biannually']['subscribers'],
-        'annual_subscription_amount': subscription_data['annually']['amount'],
-        'annual_subscribers': subscription_data['annually']['subscribers'],
-        'student_subscription_amount': subscription_data['student']['amount'],
-        'student_subscribers': subscription_data['student']['subscribers'],
-    }
-    
-    # Check if it's an AJAX request
+    context = create_reports(start_date, end_date)
+    # Check if this is an AJAX request
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return JsonResponse(context)
-    
+        
     return render(request, "reports.html", context)
 
-def get_historical_data(model, date_field, value_field=None, months=6, filters=None):
-    """
-    Get monthly historical data for the specified model and fields
-    
-    Args:
-        model: Django model class
-        date_field: String name of the date field to query
-        value_field: Optional field to sum values from
-        months: Number of months of history to return
-        filters: Optional dictionary of additional filter conditions
-    """
-    end_date = timezone.now().date()
-    start_date = end_date - timedelta(days=30 * months)
-    
-    months_data = []
-    current_date = start_date
-    
-    # Initialize base query filters
-    base_filters = {
-        f'{date_field}__date__gte': current_date,
-        f'{date_field}__date__lte': None  # Will be set in the loop
-    }
-    
-    # Add any additional filters
-    if filters:
-        base_filters.update(filters)
-    
-    while current_date <= end_date:
-        month_end = (current_date + timedelta(days=32)).replace(day=1) - timedelta(days=1)
-        
-        # Update the date range filter
-        query_filters = base_filters.copy()
-        query_filters[f'{date_field}__date__lte'] = month_end
-        
-        if value_field:
-            count = model.objects.filter(**query_filters).aggregate(
-                total=Sum(value_field))['total'] or 0
-        else:
-            count = model.objects.filter(**query_filters).count()
-            
-        months_data.append({
-            'label': current_date.strftime('%b'),
-            'value': float(count) if isinstance(count, Decimal) else count
-        })
-        current_date = (current_date + timedelta(days=32)).replace(day=1)
-    
-    return {
-        'labels': [m['label'] for m in months_data],
-        'values': [m['value'] for m in months_data]
-    }
-
-def get_daily_checkins_distribution():
-    """Get check-in distribution by time slots"""
-    today = timezone.now().date()
-    time_slots = [
-        ('6-9am', 6, 9),
-        ('9-12pm', 9, 12),
-        ('12-3pm', 12, 15),
-        ('3-6pm', 15, 18),
-        ('6-9pm', 18, 21),
-        ('9-11pm', 21, 23)
-    ]
-    
-    distribution = []
-    for slot_name, start_hour, end_hour in time_slots:
-        count = CheckInOutRecord.objects.filter(
-            action='check_in',
-            timestamp__hour__gte=start_hour,
-            timestamp__hour__lt=end_hour
-        ).count()
-        distribution.append(count)
-    
-    return {
-        'labels': [slot[0] for slot in time_slots],
-        'values': distribution
-    }
-
-def get_revenue_breakdown():
-    """Get revenue breakdown by plan type"""
-    total_by_plan = PaymentDetails.objects.values('plan').annotate(
-        total=Sum('amount')
-    ).order_by('-total')
-    
-    return {
-        'labels': [item['plan'].title() for item in total_by_plan],
-        'values': [float(item['total']) for item in total_by_plan]
-    }
-
 def download_report(request):
-    today = timezone.now().date()
-    thirty_days_ago = today - timedelta(days=30)
+    try:
+        start_date = request.GET.get('start_date')
+        end_date = request.GET.get('end_date')
+        
+        start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+        end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+        
+        header = request.GET.get('X-Requested-With')
+    except:
+        end_date = timezone.now().date()
+        start_date = end_date - timedelta(days=30)
+        header = None
     
-    # Get all required metrics
-    total_members = Member.objects.count()
-    active_members = Member.objects.filter(is_active=True, is_frozen=False).count()
-    new_members = Member.objects.filter(date_joined__date__gte=thirty_days_ago).count()
-    active_checkins = CheckInOutRecord.objects.filter(
-        action='check_in',
-        timestamp__date=today
-    ).count()
-    
-    # Calculate gender distribution
-    gender_stats = Member.objects.values('gender').annotate(
-        count=Count('id')
-    )
-    male_percent = next((item['count'] / total_members * 100 
-                        for item in gender_stats if item['gender'].lower() == 'male'), 0)
-    female_percent = next((item['count'] / total_members * 100 
-                         for item in gender_stats if item['gender'].lower() == 'female'), 0)
-    
-    # Get revenue data
-    total_revenue = PaymentDetails.objects.filter(
-        payment_date__gte=thirty_days_ago
-    ).aggregate(total=Sum('amount'))['total'] or 0
-    
-    # First prepare expense data
-    expense_types = list(Expense.objects.values_list('expense_type', flat=True).distinct())
-    expense_data = {
-        "labels": expense_types,
-        "values": [
-            float(Expense.objects.filter(expense_type=exp_type).aggregate(
-                total=Sum('amount'))['total'] or 0) 
-            for exp_type in expense_types
-        ]
-    }
-    
-    # Prepare data dictionary for report
-    report_data = {
-        "All Members": {
-            "current": total_members,
-            "description": f"Total registered members: {total_members} (↑{new_members} this month). "
-                         f"Demographics show {male_percent:.1f}% male, {female_percent:.1f}% female.",
-            "chart_type": "line",
-            "chart_data": get_historical_data(Member, 'date_joined')
-        },
-        "Active Members": {
-            "current": active_members,
-            "description": f"{active_members} active members "
-                         f"({(active_members/total_members*100):.1f}% engagement rate).",
-            "chart_type": "line",
-            "chart_data": get_historical_data(Member, 'date_joined', None, 6)
-        },
-        "Active Check-ins": {
-            "current": active_checkins,
-            "description": "Daily check-ins distribution across different times.",
-            "chart_type": "bar",
-            "chart_data": get_daily_checkins_distribution()
-        },
-        "Not Attending": {
-            "current": Member.objects.filter(is_active=False).count(),
-            "description": "Inactive member trends and reactivation rates.",
-            "chart_type": "line",
-            "chart_data": get_historical_data(Member, 'date_joined', filters={'is_active': False})
-        },
-        "Total Revenue": {
-            "current": f"${float(total_revenue):,.2f}",
-            "description": "Revenue breakdown by subscription type",
-            "chart_type": "pie",
-            "chart_data": get_revenue_breakdown()
-        },
-        "Subscription Distribution": {
-            "current": f"{PaymentDetails.objects.count()} total",
-            "description": "Distribution of subscription types",
-            "chart_type": "pie",
-            "chart_data": {
-                "labels": [plan[1] for plan in PaymentDetails.PLAN_CHOICES],
-                "values": [PaymentDetails.objects.filter(plan=plan[0]).count() 
-                          for plan in PaymentDetails.PLAN_CHOICES]
-            }
-        },
-        "Expenses": {
-            "current": f"${sum(expense_data['values']):,.2f}",
-            "description": "Breakdown of expenses by category",
-            "chart_type": "pie",
-            "chart_data": expense_data
-        }
-    }
-    
+    report_data = create_reports(start_date, end_date)
     # Generate and upload report
-    comprehensive_report = create_fastcardio_report(report_data, expense_data)
+    comprehensive_report = create_fastcardio_report(
+        report_data, 
+        start_date.strftime('%Y-%m-%d'),
+        end_date.strftime('%Y-%m-%d')
+        )
     
     return JsonResponse({'download_url': comprehensive_report['firebase_url']})
-
+    # return render(request, "reports.html", context)
 
 def member_status(request):
     today = timezone.now().date()
