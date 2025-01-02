@@ -146,7 +146,7 @@
                 const data = await response.json();
                 
                 if (response.ok) {
-                    showNotification('Success', 'Reminder sent successfully', 'success');
+                    showNotification('error', 'Failed to send successfully', 'error');
                     const activeButton = document.querySelector('.filter-btn.active');
                     loadReminders(activeButton.dataset.type);
                 } else {

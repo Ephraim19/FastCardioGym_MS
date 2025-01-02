@@ -1310,13 +1310,123 @@ def download_report(request):
         start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
         end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
         
-        header = request.GET.get('X-Requested-With')
     except:
         end_date = timezone.now().date()
         start_date = end_date - timedelta(days=30)
-        header = None
     
-    report_data = create_reports(start_date, end_date)
+    context = create_reports(start_date, end_date)
+    
+    report_data = {
+        "Membership Overview": {
+            "current": context['total_members'],
+            "description": "Overview of current membership status and engagement.",
+            "chart_type": "pie",
+            "chart_data": {
+                "labels": ["Active", "Frozen", "Inactive"],
+                "values": [
+                    context['active_members'],
+                    context['frozen_members'],
+                    context['inactive_members']
+                ]
+            },
+            "date_range": "Current Month",
+            "metrics": {
+                "Active Members": f"{context['active_percentage']}%",
+                "Average Membership Duration": f"{context['avg_membership_days']} days",
+                "Longest Membership": f"{context['longest_membership_days']} days",
+                "New Members This Month": context['new_members_this_month']
+            }
+        },
+        "Attendance Analytics": {
+            "current": context['avg_daily_checkins'],
+            "description": "Daily attendance patterns and peak usage analysis.",
+            "chart_type": "bar",
+            "chart_data": {
+                "labels": ["Peak Hours", "Off-Peak Hours"],
+                "values": [
+                    context['peak_hour_percentage'],
+                    100 - context['peak_hour_percentage']
+                ]
+            },
+            "date_range": "Current Month",
+            "metrics": {
+                "Peak Hours": f"{context['peak_hour_start']} - {context['peak_hour_end']}",
+                "Busiest Day": context['busiest_weekday'],
+                "Non-Attending Members": context['not_attending'],
+                "Retention Rate": f"{context['retention_rate']}%"
+            }
+        },
+        "Member Demographics": {
+            "current": context['total_members'],
+            "description": "Gender distribution and progress tracking statistics.",
+            "chart_type": "pie",
+            "chart_data": {
+                "labels": ["Male", "Female"],
+                "values": [
+                    context['male_percentage'],
+                    context['female_percentage']
+                ]
+            },
+            "date_range": "Current Month",
+            "metrics": {
+                "Average Weight": f"{context['avg_weight']} kg",
+                "Average Body Fat": f"{context['avg_body_fat']}%",
+                "Average Muscle Mass": f"{context['avg_muscle_mass']} kg",
+                "Members with Weight Loss": context['members_with_weight_loss'],
+                "Members with Fat Loss": context['members_with_fat_loss']
+            }
+        },
+        "Financial Analysis": {
+            "current": context['total_revenue'],
+            "description": "Revenue breakdown and subscription distribution.",
+            "chart_type": "bar",
+            "chart_data": {
+                "labels": ["Daily", "Monthly", "Quarterly", "Biannual", "Annual", "Student"],
+                "values": [
+                    context['daily_subscribers'],
+                    context['monthly_subscribers'],
+                    context['quarterly_subscribers'],
+                    context['biannual_subscribers'],
+                    context['annual_subscribers'],
+                    context['student_subscribers']
+                ]
+            },
+            "date_range": "Current Month",
+            "metrics": {
+                "Total Subscriptions": context['total_subscriptions'],
+                "Average Payment": f"${context['avg_payment_amount']}",
+                "Maximum Payment": f"${context['max_payment_amount']}",
+                "Total Member Credit": f"${context['total_member_credit']}",
+                "Total Member Debt": f"${context['total_member_debt']}"
+            }
+        },
+        "Subscription Plans": {
+            "current": context['total_subscriptions'],
+            "description": "Detailed breakdown of subscription plans and pricing.",
+            "chart_type": "bar",
+            "chart_data": {
+                "labels": ["Daily", "Monthly", "Quarterly", "Biannual", "Annual", "Student"],
+                "values": [
+                    context['daily_subscription_amount'],
+                    context['monthly_subscription_amount'],
+                    context['quarterly_subscription_amount'],
+                    context['biannual_subscription_amount'],
+                    context['annual_subscription_amount'],
+                    context['student_subscription_amount']
+                ]
+            },
+            "date_range": "Current Month",
+            "metrics": {
+                "Daily Plan": f"${context['daily_subscription_amount']} ({context['daily_subscribers']} members)",
+                "Monthly Plan": f"${context['monthly_subscription_amount']} ({context['monthly_subscribers']} members)",
+                "Quarterly Plan": f"${context['quarterly_subscription_amount']} ({context['quarterly_subscribers']} members)",
+                "Biannual Plan": f"${context['biannual_subscription_amount']} ({context['biannual_subscribers']} members)",
+                "Annual Plan": f"${context['annual_subscription_amount']} ({context['annual_subscribers']} members)",
+                "Student Plan": f"${context['student_subscription_amount']} ({context['student_subscribers']} members)"
+            }
+        }
+    }
+    
     # Generate and upload report
     comprehensive_report = create_fastcardio_report(
         report_data, 
