@@ -31,55 +31,58 @@
         const filterButtons = document.querySelectorAll('.filter-btn');
 
         function createReminderCard(reminder) {
-        let details = '';
-        let statusClass = '';
-        
-        // Add phone number to the common information
-        const phoneInfo = `<p><strong>Phone:</strong> ${reminder.phone || 'Not provided'}</p>`;
-        
-        if (reminder.type === 'attendance') {
-            statusClass = 'attendance-reminder';
-            details = `
-                ${phoneInfo}
-                <p><strong>Days Since Last Visit:</strong> ${reminder.days_absent}</p>
-                <p><strong>Status:</strong> Active Membership</p>
-            `;
-        } else if (reminder.type === 'subscription') {
-            statusClass = 'subscription-reminder';
-            const lastAttended = reminder.last_attended ? 
-                new Date(reminder.last_attended).toLocaleDateString() : 'Never';
-            details = `
-                ${phoneInfo}
-                <p><strong>Days Until Expiry:</strong> ${reminder.days_until_expiry}</p>
-                <p><strong>Expiry Date:</strong> ${reminder.expiry_date}</p>
-                <p><strong>Last Attended:</strong> ${lastAttended}</p>
-            `;
-        } else if (reminder.category) {
-            statusClass = 'sent-reminder';
-            details = `
-                ${phoneInfo}
-                <p><strong>Message:</strong> ${reminder.reminder}</p>
-                <p><strong>Sent On:</strong> ${reminder.sent_date}</p>
-                <p><strong>Type:</strong> ${reminder.category}</p>
+            let details = '';
+            let statusClass = '';
+            
+            // Add phone number to the common information
+            const phoneInfo = `<p><strong>Phone:</strong> ${reminder.phone || 'Not provided'}</p>`;
+            
+            if (reminder.type === 'attendance') {
+                statusClass = 'attendance-reminder';
+                details = `
+                    ${phoneInfo}
+                    <p><strong>Days Since Last Visit:</strong> ${reminder.days_absent}</p>
+                    <p><strong>Status:</strong> Active Membership</p>
+                `;
+            } else if (reminder.type === 'subscription') {
+                statusClass = 'subscription-reminder';
+                const lastAttended = reminder.last_attended ? 
+                    new Date(reminder.last_attended).toLocaleDateString() : 'Never';
+                details = `
+                    ${phoneInfo}
+                    <p><strong>Days Until Expiry:</strong> ${reminder.days_until_expiry}</p>
+                    <p><strong>Expiry Date:</strong> ${reminder.expiry_date}</p>
+                    <p><strong>Last Attended:</strong> ${lastAttended}</p>
+                `;
+            } else if (reminder.category) {
+                statusClass = 'sent-reminder';
+                details = `
+                    ${phoneInfo}
+                    <p><strong>Message:</strong> ${reminder.reminder}</p>
+                    <p><strong>Sent On:</strong> ${reminder.sent_date}</p>
+                    <p><strong>Type:</strong> ${reminder.category}</p>
+                `;
+            }
+            
+            return `
+                <div class="reminder-card ${statusClass}">
+                    <div class="reminder-details">
+                        <h3>${reminder.name}</h3>
+                        ${details}
+                    </div>
+                    ${!reminder.category ? `
+                        <div class="reminder-actions">
+                            <button class="btn send-reminder" data-member-id="${reminder.member_id}">
+                                Send Reminder
+                            </button>
+                            <button class="btn mark-sent" data-member-id="${reminder.member_id}">
+                                Mark as Sent
+                            </button>
+                        </div>
+                    ` : ''}
+                </div>
             `;
         }
-        
-        return `
-            <div class="reminder-card ${statusClass}">
-                <div class="reminder-details">
-                    <h3>${reminder.name}</h3>
-                    ${details}
-                </div>
-                ${!reminder.category ? `
-                    <div class="reminder-action">
-                        <button class="btn send-reminder" data-member-id="${reminder.member_id}">
-                            Send Reminder
-                        </button>
-                    </div>
-                ` : ''}
-            </div>
-        `;
-    }
         
         async function loadReminders(type) {
             try {
@@ -113,8 +116,12 @@
                     });
                 }
                 
+                // Set up event listeners for both types of buttons
                 document.querySelectorAll('.send-reminder').forEach(button => {
                     button.addEventListener('click', handleSendReminder);
+                });
+                document.querySelectorAll('.mark-sent').forEach(button => {
+                    button.addEventListener('click', handleMarkAsSent);
                 });
             } catch (error) {
                 console.error('Error loading reminders:', error);
@@ -146,7 +153,7 @@
                 const data = await response.json();
                 
                 if (response.ok) {
-                    showNotification('error', 'Failed to send successfully', 'error');
+                    showNotification('Success', 'Reminder sent successfully', 'success');
                     const activeButton = document.querySelector('.filter-btn.active');
                     loadReminders(activeButton.dataset.type);
                 } else {
@@ -159,6 +166,42 @@
                 showNotification('Error', 'Failed to send reminder', 'error');
                 button.disabled = false;
                 button.textContent = 'Send Reminder';
+            }
+        }
+
+        async function handleMarkAsSent(event) {
+            const button = event.target;
+            const memberId = button.dataset.memberId;
+            
+            try {
+                button.disabled = true;
+                button.textContent = 'Marking...';
+                
+                const response = await fetch('/reminders/mark-sent/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({ member_id: memberId })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showNotification('Success', 'Reminder marked as sent', 'success');
+                    const activeButton = document.querySelector('.filter-btn.active');
+                    loadReminders(activeButton.dataset.type);
+                } else {
+                    showNotification('Error', data.message || 'Failed to mark reminder as sent', 'error');
+                    button.disabled = false;
+                    button.textContent = 'Mark as Sent';
+                }
+            } catch (error) {
+                console.error('Error marking reminder as sent:', error);
+                showNotification('Error', 'Failed to mark reminder as sent', 'error');
+                button.disabled = false;
+                button.textContent = 'Mark as Sent';
             }
         }
 

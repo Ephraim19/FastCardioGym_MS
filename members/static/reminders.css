@@ -121,10 +121,23 @@ body {
     color: var(--pink-dark);
 }
 
-.reminder-action {
+.reminder-actions {
     display: flex;
     justify-content: flex-end;
+    gap: 10px;
 }
+
+.btn.mark-sent {
+    background-color: var(--pink-light);
+    border: 2px solid var(--pink-primary);
+    color: var(--pink-dark);
+}
+
+.btn.mark-sent:hover {
+    background-color: var(--pink-primary);
+    color: var(--white);
+}
+
 
 .btn {
     background-color: var(--pink-primary);
@@ -257,5 +270,17 @@ body {
     .btn {
         padding: 8px 16px;
         font-size: 0.9rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .reminder-actions {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .btn.mark-sent,
+    .btn.send-reminder {
+        width: 100%;
     }
 }

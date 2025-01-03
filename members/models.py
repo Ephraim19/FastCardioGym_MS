@@ -161,4 +161,17 @@ class MemberProgress(models.Model):
 
     def __str__(self):
         return f"{self.member} - Progress on {self.date}"
+
+# class GymReminder(models.Model):
+#     CATEGORY_CHOICES = (
+#         ('attendance', 'Attendance'),
+#         ('subscription', 'Subscription'),
+#     )
     
+#     member = models.ForeignKey('Member', on_delete=models.CASCADE)
+#     category = models.CharField(max_length=20, choices=CATEGORY_CHOICES)
+#     reminder = models.TextField()
+#     created_at = timezone.now()
+#     is_sent = models.BooleanField(default=False)
+#     sent_manually = models.BooleanField(default=False)
+#     sent_date = models.DateTimeField(null=True, blank=True)

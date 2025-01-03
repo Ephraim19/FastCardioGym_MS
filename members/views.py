@@ -700,12 +700,7 @@ class RevenueAndMembershipView(View):
         
         return JsonResponse(response_data)
 
-from django.shortcuts import render
-from django.http import JsonResponse
-from django.utils import timezone
-from datetime import timedelta
-from django.db.models import Max, Q
-from .models import Member, PaymentDetails, CheckInOutRecord, gym_reminder
+
 
 def calculate_expiry_dates(payment):
     plan_durations = {
@@ -854,6 +849,92 @@ def reminders(request):
 
 def send_reminder(request):
     return JsonResponse({'status': 'success', 'message': 'Reminder sent successfully!'})
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def mark_reminder_sent(request):
+    try:
+        data = json.loads(request.body)
+        member_id = data.get('member_id')
+        
+        if not member_id:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Member ID is required'
+            }, status=400)
+
+        member = Member.objects.get(id=member_id)
+        
+        # First check if there's an existing pending reminder
+        existing_reminder = gym_reminder.objects.filter(
+            member=member,
+            is_sent=False
+        ).first()
+        
+        if existing_reminder:
+            # Mark the existing reminder as sent
+            existing_reminder.is_sent = True
+            existing_reminder.save()
+            
+            return JsonResponse({
+                'status': 'success',
+                'message': 'Existing reminder marked as sent'
+            })
+        
+        # If no existing reminder, create a new one based on the member's status
+        # Check for subscription expiry
+        latest_payment = member.payments.order_by('-payment_date').first()
+        if latest_payment:
+            expiry_date = calculate_expiry_dates(latest_payment)
+            days_until_expiry = (expiry_date - timezone.now().date()).days
+            if 0 <= days_until_expiry <= 7:
+                reminder = gym_reminder.objects.create(
+                    member=member,
+                    category='expiry',
+                    reminder=f"Your membership expires in {days_until_expiry} days. Please renew to continue accessing our facilities.",
+                    is_sent=True
+                )
+                return JsonResponse({
+                    'status': 'success',
+                    'message': 'Subscription reminder marked as sent'
+                })
+
+        # Check for attendance
+        last_checkin = member.CheckinOut.filter(
+            action='check_in'
+        ).order_by('-timestamp').first()
+        
+        seven_days_ago = timezone.now() - timedelta(days=7)
+        if not last_checkin or last_checkin.timestamp < seven_days_ago:
+            days_absent = (timezone.now() - last_checkin.timestamp).days if last_checkin else 'Never attended'
+            reminder = gym_reminder.objects.create(
+                member=member,
+                category='attendance',
+                reminder=f"We miss seeing you at the gym! It's been {days_absent} days since your last visit.",
+                is_sent=True
+            )
+            return JsonResponse({
+                'status': 'success',
+                'message': 'Attendance reminder marked as sent'
+            })
+
+        return JsonResponse({
+            'status': 'error',
+            'message': 'No valid reminder criteria found for this member'
+        }, status=400)
+
+    except Member.DoesNotExist:
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Member not found'
+        }, status=404)
+        
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': 'An error occurred while processing your request'
+        }, status=500)
+        
 def freeze_member(request,member_id):
     
     if request.method == "POST":
