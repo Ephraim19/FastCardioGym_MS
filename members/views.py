@@ -783,6 +783,7 @@ def reminders(request):
                             'last_attended': last_checkin.timestamp if last_checkin else None,
                             'expiry_date': expiry_date.strftime('%Y-%m-%d')
                         })
+                    
             return JsonResponse({'reminders': reminders_data})
             
         else:  # all reminders

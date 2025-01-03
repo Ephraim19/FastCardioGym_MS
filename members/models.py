@@ -93,7 +93,7 @@ class gym_reminder(models.Model):
     is_sent = models.BooleanField(default=False)
     
     class Meta:
-        ordering = ['created_at']
+        ordering = ['-created_at']
     
     def __str__(self):
         return f"{self.member} - {self.reminder_date}"
