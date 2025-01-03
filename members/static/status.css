@@ -175,6 +175,7 @@ tr:nth-child(even) {
     background: var(--pink-50);
 }
 
+
 /* Responsive Table */
 @media screen and (max-width: 768px) {
     .dashboard-container {
