@@ -720,11 +720,14 @@ def reminders(request):
         current_date = timezone.now().date()
         
         if reminder_type == 'sent':
-            sent_reminders = gym_reminder.objects.filter(is_sent=True).select_related('member')
+            sent_reminders = gym_reminder.objects.filter(
+                is_sent=True
+            ).select_related('member')
+            
             reminders_data = [{
                 'member_id': reminder.member.id,
                 'name': f"{reminder.member.first_name} {reminder.member.last_name}",
-                'phone': reminder.member.phone_number,  # Added phone number
+                'phone': reminder.member.phone_number,
                 'reminder': reminder.reminder,
                 'sent_date': reminder.created_at.strftime('%Y-%m-%d'),
                 'category': reminder.get_category_display()
@@ -733,10 +736,18 @@ def reminders(request):
         
         elif reminder_type == 'attendance':
             seven_days_ago = timezone.now() - timedelta(days=7)
+            
+            # Get members who haven't checked in for 7 days
             inactive_members = Member.objects.filter(
                 is_active=True,
                 is_frozen=False
-            ).prefetch_related('CheckinOut')
+            ).prefetch_related(
+                'CheckinOut',
+                'reminders'
+            ).exclude(
+                reminders__category='attendance',
+                reminders__is_sent=True
+            )
             
             reminders_data = []
             for member in inactive_members:
@@ -749,17 +760,25 @@ def reminders(request):
                     reminders_data.append({
                         'member_id': member.id,
                         'name': f"{member.first_name} {member.last_name}",
-                        'phone': member.phone_number,  # Added phone number
+                        'phone': member.phone_number,
                         'type': 'attendance',
                         'days_absent': days_absent or 'Never attended'
                     })
             return JsonResponse({'reminders': reminders_data})
             
         elif reminder_type == 'subscription':
+            # Get members whose subscription is expiring soon
             expiring_members = Member.objects.filter(
                 is_active=True,
                 is_frozen=False
-            ).prefetch_related('payments', 'CheckinOut')
+            ).prefetch_related(
+                'payments',
+                'CheckinOut',
+                'reminders'
+            ).exclude(
+                reminders__category='expiry',
+                reminders__is_sent=True
+            )
             
             reminders_data = []
             for member in expiring_members:
@@ -777,26 +796,30 @@ def reminders(request):
                         reminders_data.append({
                             'member_id': member.id,
                             'name': f"{member.first_name} {member.last_name}",
-                            'phone': member.phone_number,  # Added phone number
+                            'phone': member.phone_number,
                             'type': 'subscription',
                             'days_until_expiry': days_until_expiry,
                             'last_attended': last_checkin.timestamp if last_checkin else None,
                             'expiry_date': expiry_date.strftime('%Y-%m-%d')
                         })
-                    
+            
             return JsonResponse({'reminders': reminders_data})
             
         else:  # all reminders
-            attendance_data = []
-            subscription_data = []
-            
             # Get attendance reminders
             seven_days_ago = timezone.now() - timedelta(days=7)
             inactive_members = Member.objects.filter(
                 is_active=True,
                 is_frozen=False
-            ).prefetch_related('CheckinOut')
+            ).prefetch_related(
+                'CheckinOut',
+                'reminders'
+            ).exclude(
+                reminders__category='attendance',
+                reminders__is_sent=True
+            )
             
+            attendance_data = []
             for member in inactive_members:
                 last_checkin = member.CheckinOut.filter(
                     action='check_in'
@@ -807,7 +830,7 @@ def reminders(request):
                     attendance_data.append({
                         'member_id': member.id,
                         'name': f"{member.first_name} {member.last_name}",
-                        'phone': member.phone_number, 
+                        'phone': member.phone_number,
                         'type': 'attendance',
                         'days_absent': days_absent or 'Never attended'
                     })
@@ -816,8 +839,16 @@ def reminders(request):
             expiring_members = Member.objects.filter(
                 is_active=True,
                 is_frozen=False
-            ).prefetch_related('payments', 'CheckinOut')
+            ).prefetch_related(
+                'payments',
+                'CheckinOut',
+                'reminders'
+            ).exclude(
+                reminders__category='expiry',
+                reminders__is_sent=True
+            )
             
+            subscription_data = []
             for member in expiring_members:
                 latest_payment = member.payments.order_by('-payment_date').first()
                 
@@ -833,7 +864,7 @@ def reminders(request):
                         subscription_data.append({
                             'member_id': member.id,
                             'name': f"{member.first_name} {member.last_name}",
-                            'phone': member.phone_number, 
+                            'phone': member.phone_number,
                             'type': 'subscription',
                             'days_until_expiry': days_until_expiry,
                             'last_attended': last_checkin.timestamp if last_checkin else None,
@@ -846,7 +877,6 @@ def reminders(request):
             })
             
     return render(request, 'reminders.html')
-
 
 def send_reminder(request):
     return JsonResponse({'status': 'success', 'message': 'Reminder sent successfully!'})
