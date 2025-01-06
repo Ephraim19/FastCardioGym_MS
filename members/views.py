@@ -203,7 +203,6 @@ def save_member(request):
     return HttpResponse("Error saving member")
 
 
-
 def save_payment(request, member_id=None):
     # Option 1: Use session to get member ID
     if member_id is None:
@@ -232,7 +231,7 @@ def save_payment(request, member_id=None):
             return redirect("Members")
         
         # Create payment record
-        payment = PaymentDetails.objects.create(
+        PaymentDetails.objects.create(
             member=member,
             plan=plan,
             amount=amount,
@@ -250,14 +249,12 @@ def save_payment(request, member_id=None):
                 'student': timedelta(days=30)
             }
             
-            # If there's an existing expiry date in the future, extend from that date
             current_date = timezone.now().date()
-            if member.membership_expiry and member.membership_expiry > current_date:
-                new_expiry = member.membership_expiry + expiry_periods.get(plan, timedelta(0))
-            else:
-                # Otherwise start from today
-                new_expiry = current_date + expiry_periods.get(plan, timedelta(0))
             
+            # If membership is expired, start from today
+            # If membership is active, add to current expiry date
+            start_date = max(current_date, member.membership_expiry or current_date)
+            new_expiry = start_date + expiry_periods.get(plan, timedelta(0))
             member.membership_expiry = new_expiry
         
         # Calculate difference between paid and expected amount
@@ -281,23 +278,19 @@ def save_payment(request, member_id=None):
                     f'Underpayment of {abs(difference):.2f}. Current balance: {member.balance:.2f}.')
         else:
             member.is_active = True
-            messages.success(request, f'Complete payment of {amount:.2f} recorded. Your balance is {member.balance:.2f} Membership activated.')
+            messages.success(request, f'Complete payment of {amount:.2f} recorded. Balance: {member.balance:.2f}')
         
         member.save()
         
-        # Determine appropriate success message
-        if member.is_active:
-            messages.success(request, 
-                f'Payment saved successfully for {member}! Membership has been activated and will expire on {member.membership_expiry.strftime("%Y-%m-%d")}.')
-        else:
-            messages.success(request, 
-                f'Payment saved successfully for {member}, membership is activated until {member.membership_expiry.strftime("%Y-%m-%d")}.')
+        # Success message with expiry information
+        messages.success(request, 
+            f'Payment saved successfully for {member}! '
+            f'Membership is active until {member.membership_expiry.strftime("%Y-%m-%d")}.')
         
         return redirect("Members")
-        
+    
     # Render payment form with member context
     return render(request, 'payment.html', {'member': member})
-
 
 def calculate_expiry_date(payment_date, plan):
     if not payment_date:
@@ -314,65 +307,6 @@ def calculate_expiry_date(payment_date, plan):
     
     return payment_date + expiry_periods.get(plan, timedelta(0))
 
-def members(request):
-    # Retrieve members with their total payments
-    members_with_payments = []
-    
-    for member in Member.objects.all():
-        # Get all payment details for this member
-        payments = PaymentDetails.objects.filter(member=member)
-        
-        # Calculate total amount paid
-        total_amount_paid = payments.aggregate(total=Sum('amount'))['total'] or 0
-        
-        # Get the latest payment details
-        latest_payment = payments.order_by('-payment_date').first()
-        
-        # Calculate expiry date
-        expiry_date = None
-        membership_status = 'Expired'
-        
-        if latest_payment:
-            expiry_date = calculate_expiry_date(latest_payment.payment_date, latest_payment.plan)
-            
-            if expiry_date:
-                today = timezone.now().date()
-                days_until_expiry = (expiry_date - today).days
-                
-                if days_until_expiry > 7:
-                    membership_status = 'Active'
-                elif days_until_expiry > 0:
-                    membership_status = 'Expiring Soon'
-                else:
-                    membership_status = 'Expired'
-        
-        # Prepare member data
-        member_data = {
-            'id': member.id,
-            'full_name': str(member),
-            'first_name': member.first_name,
-            'last_name': member.last_name,
-            'phone_number': member.phone_number,
-            'date_joined': member.date_joined,
-            'additional_info': member.additional_info or '',
-            'total_amount_paid': total_amount_paid,
-            'latest_plan': latest_payment.plan if latest_payment else 'No Plan',
-            'latest_payment_date': latest_payment.payment_date if latest_payment else None,
-            'expiry_date': expiry_date,
-            'membership_status': membership_status,
-            'days_until_expiry': (expiry_date - timezone.now().date()).days if expiry_date else None
-        }
-        
-        members_with_payments.append(member_data)
-    
-    members_with_payments.reverse()
-    
-    return render(request, 'allmembers.html', {
-        'members': members_with_payments,
-        'today': timezone.now().date()
-    })
-    
-
 def calculate_expiry_date(payment_date, plan):
     if plan == 'daily':
         return payment_date + timedelta(days=1)
@@ -388,79 +322,146 @@ def calculate_expiry_date(payment_date, plan):
         return payment_date + timedelta(days=30)  
     
     return None
+from django.shortcuts import get_object_or_404, render
+from django.utils import timezone
+from django.db.models import Count
+from .models import Member, PaymentDetails, CheckInOutRecord, MemberProgress, Freeze_member
 
 def member_details(request, member_id):
-    # Get member or return 404
+    """
+    Detailed view function for individual member information, including payment history,
+    check-in records, membership status, and progress tracking.
+    """
     member = get_object_or_404(Member, pk=member_id)
-    
-    # Get all payments
-    recent_payments = PaymentDetails.objects.filter(member=member).order_by('-payment_date')[:3]
-    
-    # Get latest payment and calculate expiry
-    latest_payment = PaymentDetails.objects.filter(member=member).order_by('-payment_date').first()
-    
-    if latest_payment:
-        expiry_date = calculate_expiry_date(latest_payment.payment_date, latest_payment.plan)
-        days_left = (expiry_date - timezone.now().date()).days if expiry_date else 0
-        membership_status = "Active" if days_left > 0 and member.is_active else "Expired"
-    else:
-        expiry_date = None
-        days_left = 0
-        membership_status = "Inactive"
+    today = timezone.now().date()
 
-    # Get check-in statistics
-    total_checkins = CheckInOutRecord.objects.filter(
-        member=member, 
-        action='check_in'
-    ).count()
+    # Payment Information
+    recent_payments = PaymentDetails.objects.filter(member=member).order_by('-payment_date')[:5]
+    latest_payment = recent_payments.first()
+    total_paid = PaymentDetails.objects.filter(member=member).aggregate(total=Sum('amount'))['total'] or 0
 
-    # Get recent check-ins
-    recent_checkins = CheckInOutRecord.objects.filter(
-        member=member,
-        action='check_in'
-    ).order_by('-timestamp')[:5]
+    # Membership Status Calculation
+    membership_status = calculate_membership_status(member, today)
 
-    # Calculate check-ins this month
-    first_day_of_month = timezone.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    checkins_this_month = CheckInOutRecord.objects.filter(
-        member=member,
-        action='check_in',
-        timestamp__gte=first_day_of_month
-    ).count()
+    # Check-in Statistics
+    checkin_stats = get_checkin_statistics(member)
 
-    # Get last check-in date
-    last_checkin = CheckInOutRecord.objects.filter(
-        member=member,
-        action='check_in'
-    ).order_by('-timestamp').first()
+    # Progress Tracking
+    latest_progress = MemberProgress.objects.filter(member=member).order_by('-date').first()
+    progress_history = MemberProgress.objects.filter(member=member).order_by('-date')[:5]
 
-    # Get balance status message
-    if member.balance > 0:
-        balance_status = "Credit"
-    elif member.balance < 0:
-        balance_status = "Debt"
-    else:
-        balance_status = "Neutral"
+    # Freeze History
+    freeze_history = Freeze_member.objects.filter(member=member).order_by('-frozen_date')
+    current_freeze = freeze_history.filter(unfrozen_date__isnull=True).first()
 
+    # Balance Information
+    balance_info = get_balance_status(member.balance)
+    print(bool(current_freeze))
     context = {
+        # Member Basic Info
         'member': member,
+        'membership_status': membership_status['status'],
+        'days_left': membership_status['days_left'],
+        'expiry_date': member.membership_expiry,
+        
+        # Payment Information
         'recent_payments': recent_payments,
-        'recent_checkins': recent_checkins,
         'latest_payment': latest_payment,
-        'membership_status': membership_status,
-        'expiry_date': expiry_date,
-        'days_left': days_left,
-        'total_checkins': total_checkins,
-        'checkins_this_month': checkins_this_month,
-        'last_checkin': last_checkin,
         'current_plan': latest_payment.plan if latest_payment else "No active plan",
+        'total_paid': total_paid,
+        
+        # Check-in Information
+        'total_checkins': checkin_stats['total'],
+        'checkins_this_month': checkin_stats['monthly'],
+        'recent_checkins': checkin_stats['recent'],
+        'last_checkin': checkin_stats['last'],
+        'attendance_rate': checkin_stats['attendance_rate'],
+        
+        # Progress Information
+        'latest_progress': latest_progress,
+        'progress_history': progress_history,
+        
+        # Freeze Information
+        'is_currently_frozen': bool(current_freeze),
+        'freeze_history': freeze_history,
+        'current_freeze': current_freeze,
+        
+        # Balance Information
         'balance': member.balance,
-        'balance_status': balance_status,
+        'balance_status': balance_info['status'],
+        'balance_message': balance_info['message']
     }
-    
+
     return render(request, 'member_details.html', context)
 
+def calculate_membership_status(member, today):
+    """
+    Calculate detailed membership status and days remaining
+    """
+    if member.is_frozen:
+        return {
+            'status': 'Inactive',
+            'days_left': None
+        }
+    
+    if not member.membership_expiry:
+        return {
+            'status': 'Inactive',
+            'days_left': None
+        }
 
+    days_left = (member.membership_expiry - today).days
+
+    if member.is_active:
+        status = 'Active'
+    else:
+        status = 'Inactive'
+
+    return {
+        'status': status,
+        'days_left': days_left
+    }
+
+def get_checkin_statistics(member):
+    """
+    Calculate comprehensive check-in statistics for the member
+    """
+    today = timezone.now()
+    first_day_of_month = today.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    
+    checkins = CheckInOutRecord.objects.filter(member=member, action='check_in')
+    monthly_checkins = checkins.filter(timestamp__gte=first_day_of_month)
+    
+    # Calculate attendance rate (assuming 30 days)
+    total_days = (today.date() - member.date_joined.date()).days
+    attendance_rate = (checkins.count() / total_days * 100) if total_days > 0 else 0
+
+    return {
+        'total': checkins.count(),
+        'monthly': monthly_checkins.count(),
+        'recent': checkins.order_by('-timestamp')[:5],
+        'last': checkins.order_by('-timestamp').first(),
+        'attendance_rate': round(attendance_rate, 1)
+    }
+
+def get_balance_status(balance):
+    """
+    Generate balance status and appropriate message
+    """
+    if balance > 0:
+        return {
+            'status': 'Credit',
+            'message': 'Member has credit balance'
+        }
+    elif balance < 0:
+        return {
+            'status': 'Debt',
+            'message': 'Member has outstanding balance'
+        }
+    return {
+        'status': 'Neutral',
+        'message': 'Balance is cleared'
+    }
 def checkin(request):
 
     # Get recent check-in/out records (last 10)
@@ -1099,6 +1100,67 @@ def new_expense(request):
             print(e)
             messages.error(request, 'Error saving expense.')
     return render(request, 'expenses.html')
+
+
+def members(request):
+    # Retrieve members with their total payments
+    members_with_payments = []
+    today = timezone.now().date()
+    
+    for member in Member.objects.all():
+        # Get all payment details for this member
+        payments = PaymentDetails.objects.filter(member=member)
+        
+        # Calculate total amount paid
+        total_amount_paid = payments.aggregate(total=Sum('amount'))['total'] or 0
+        
+        # Get the latest payment details
+        latest_payment = payments.order_by('-payment_date').first()
+        
+        # Calculate membership status based on expiry date
+        membership_status = 'Expired'
+        days_until_expiry = None
+        
+        if member.membership_expiry:
+            days_until_expiry = (member.membership_expiry - today).days
+            
+            if member.is_frozen:
+                membership_status = 'Frozen'
+            elif days_until_expiry > 7:
+                membership_status = 'Active'
+            elif days_until_expiry > 0:
+                membership_status = 'Expiring Soon'
+            else:
+                membership_status = 'Expired'
+                member.is_active = False
+                member.save()
+        
+        # Prepare member data
+        member_data = {
+            'id': member.id,
+            'full_name': str(member),
+            'first_name': member.first_name,
+            'last_name': member.last_name,
+            'phone_number': member.phone_number,
+            'date_joined': member.date_joined,
+            'additional_info': member.additional_info or '',
+            'total_amount_paid': total_amount_paid,
+            'latest_plan': latest_payment.plan if latest_payment else 'No Plan',
+            'latest_payment_date': latest_payment.payment_date if latest_payment else None,
+            'expiry_date': member.membership_expiry,
+            'membership_status': membership_status,
+            'days_until_expiry': days_until_expiry,
+            'is_frozen': member.is_frozen
+        }
+        
+        members_with_payments.append(member_data)
+    
+    members_with_payments.reverse()
+    
+    return render(request, 'allmembers.html', {
+        'members': members_with_payments,
+        'today': today
+    })
 
 
 def member_progress(request, member_id):
