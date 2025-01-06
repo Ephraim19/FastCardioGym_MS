@@ -1022,35 +1022,57 @@ def mark_reminder_sent(request):
             'message': 'An error occurred while processing your request'
         }, status=500)
         
-def freeze_member(request,member_id):
+def freeze_member(request, member_id):
+
+    # Freeze the membership
+    member = get_object_or_404(Member, id=member_id)
+    member.is_frozen = True
+    member.save()
     
-    if request.method == "POST":
-        freeze_time = request.POST.get('freezeTime')
-        member = get_object_or_404(Member, id=member_id)
-        
-        
-        # Freeze the membership
-        member.is_frozen = True
-        # member.is_active = False
-        member.save()
-        
-        # Add member to freeze model
-        Freeze_member.objects.create(
-            member = member,
-            freeze_time = freeze_time,
-        )
-        
-        messages.success(request, f'Membership for {member} has been frozen for {freeze_time} days.')
-        return redirect('Members')
+    # Add member to freeze model
+    Freeze_member.objects.create(
+        member=member
+    )
     
-    return render(request, 'freeze.html')
+    messages.success(request, f'Membership for {member} has been frozen')
+    return redirect('Members')
 
 def unfreeze_member(request, member_id):
     member = get_object_or_404(Member, id=member_id)
-    member.is_frozen = False
-    member.save()
     
-    messages.success(request, f'Membership for {member} has been unfrozen')
+    # Get the freeze record for this member
+    freeze_record = Freeze_member.objects.filter(
+        member=member,
+        unfrozen_date__isnull=True  # Get the active freeze record
+    ).first()
+    
+    if freeze_record:
+        # Calculate the number of frozen days
+        frozen_days = (timezone.now().date() - freeze_record.frozen_date).days
+        
+        # Update the freeze record with unfreeze date
+        freeze_record.unfrozen_date = timezone.now()
+        freeze_record.freeze_time = frozen_days
+        freeze_record.save()
+        
+        # Extend membership expiry by the frozen duration
+        if member.membership_expiry:
+            member.membership_expiry += timedelta(days=frozen_days)
+            
+        # Unfreeze the member
+        member.is_frozen = False
+        member.save()
+        
+        messages.success(
+            request, 
+            f'Membership for {member} has been unfrozen. '
+            f'Membership expiry extended by {frozen_days} days to {member.membership_expiry.strftime("%Y-%m-%d")}'
+        )
+    else:
+        messages.warning(request, f'No freeze record found for {member}')
+        member.is_frozen = False
+        member.save()
+    
     return redirect('Members')
     
 

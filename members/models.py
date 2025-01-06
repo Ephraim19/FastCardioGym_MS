@@ -98,9 +98,14 @@ class gym_reminder(models.Model):
     
     
 class Freeze_member(models.Model):
-    member = models.ForeignKey(Member,on_delete=models.CASCADE,related_name='frozen')
-    freeze_time = models.IntegerField()
+    member = models.ForeignKey(Member, on_delete=models.CASCADE)
     frozen_date = models.DateField(auto_now_add=True)
+    unfrozen_date = models.DateField(null=True, blank=True)
+    freeze_time = models.IntegerField(null=True, blank=True)  # Store the total days frozen
+    def __str__(self):
+        return f"{self.member.first_name}"
+    
+
     
 
 class Expense(models.Model):
