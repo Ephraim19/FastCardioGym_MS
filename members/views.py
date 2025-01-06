@@ -214,7 +214,7 @@ def save_payment(request, member_id=None):
         member = get_object_or_404(Member, id=member_id)
     except:
         return HttpResponse("Member not found")
-        
+    
     if request.method == "POST":
         # Remove session variable after use
         if 'new_member_id' in request.session:
@@ -232,52 +232,72 @@ def save_payment(request, member_id=None):
             return redirect("Members")
         
         # Create payment record
-        PaymentDetails.objects.create(
+        payment = PaymentDetails.objects.create(
             member=member,
             plan=plan,
             amount=amount,
             transaction_id=transaction_id
         )
         
+        # Calculate and update membership expiry date
+        if plan != 'complete':
+            expiry_periods = {
+                'daily': timedelta(days=1),
+                'monthly': timedelta(days=30),
+                'quarterly': timedelta(days=90),
+                'biannually': timedelta(days=182),
+                'annually': timedelta(days=365),
+                'student': timedelta(days=30)
+            }
+            
+            # If there's an existing expiry date in the future, extend from that date
+            current_date = timezone.now().date()
+            if member.membership_expiry and member.membership_expiry > current_date:
+                new_expiry = member.membership_expiry + expiry_periods.get(plan, timedelta(0))
+            else:
+                # Otherwise start from today
+                new_expiry = current_date + expiry_periods.get(plan, timedelta(0))
+            
+            member.membership_expiry = new_expiry
+        
         # Calculate difference between paid and expected amount
-        print(member.balance)
         if plan == 'complete':
             difference = amount + member.balance
-            print(difference,amount, member.balance)
             member.balance = difference
-            member.save()
         else:
             difference = amount - expected_amount
             member.balance = difference
-            member.save()
         
         # Update member status based on payment and balance
         if plan != 'complete':
-         if amount >= expected_amount or (amount + member.balance >= expected_amount) :
-            member.is_active = True
-            if difference > 0:
-                messages.success(request, 
-                    f'Overpayment of {difference:.2f} recorded. Current balance: {member.balance:.2f}')
-         else:
-            member.is_active = False
-            messages.warning(request, 
-                f'Underpayment of {abs(difference):.2f}. Current balance: {member.balance:.2f}.')
+            if amount >= expected_amount or (amount + member.balance >= expected_amount):
+                member.is_active = True
+                if difference > 0:
+                    messages.success(request, 
+                        f'Overpayment of {difference:.2f} recorded. Current balance: {member.balance:.2f}')
+            else:
+                member.is_active = True
+                messages.warning(request, 
+                    f'Underpayment of {abs(difference):.2f}. Current balance: {member.balance:.2f}.')
         else:
             member.is_active = True
-            messages.success(request, f'Complete payment of {amount:.2f} recorded.Your balance is {member.balance:.2f} Membership activated.')
+            messages.success(request, f'Complete payment of {amount:.2f} recorded. Your balance is {member.balance:.2f} Membership activated.')
+        
         member.save()
         
         # Determine appropriate success message
         if member.is_active:
             messages.success(request, 
-                f'Payment saved successfully for {member}! Membership has been activated.')
+                f'Payment saved successfully for {member}! Membership has been activated and will expire on {member.membership_expiry.strftime("%Y-%m-%d")}.')
         else:
             messages.success(request, 
-                f'Payment saved successfully for {member}, but membership is inactive due to incomplete payment.')
+                f'Payment saved successfully for {member}, membership is activated until {member.membership_expiry.strftime("%Y-%m-%d")}.')
         
-        return redirect("Members")    
+        return redirect("Members")
+        
     # Render payment form with member context
     return render(request, 'payment.html', {'member': member})
+
 
 def calculate_expiry_date(payment_date, plan):
     if not payment_date:
@@ -452,73 +472,93 @@ def checkin(request):
 @require_http_methods(["POST"])
 def check_in_out(request):
     """
-    Handle check-in and check-out actions via AJAX with member status validation
+    Handle check-in and check-out actions via AJAX with member lookup by name
     """
     try:
-        # Get member ID from request
-        member_id = request.POST.get('id', '').strip()
+        # Get member name from request
+        member_name = request.POST.get('id', '').strip()
         action = request.POST.get('action', '').strip()
 
         # Validate inputs
-        if not member_id:
+        if not member_name:
             return JsonResponse({
                 'status': 'error', 
-                'message': 'Please enter a Member ID'
+                'message': 'Please enter a member name'
             }, status=400)
 
-        # Try to get the member
-        try:
-            member = Member.objects.get(phone_number=member_id)
-            
-            # Check if member is frozen
-            if member.is_frozen:
-                return JsonResponse({
-                    'status': 'error',
-                    'message': 'This membership is currently frozen. Please contact staff.'
-                }, status=400)
-            
-            # Check if member is inactive
-            if not member.is_active:
-                return JsonResponse({
-                    'status': 'error',
-                    'message': 'This membership is inactive. Please renew your membership.'
-                }, status=400)
-            
-            # Check membership expiry
-            latest_payment = PaymentDetails.objects.filter(member=member).order_by('-payment_date').first()
-            
-            if latest_payment:
-                # Calculate expiry based on plan
-                if latest_payment.plan == 'daily':
-                    expiry_date = latest_payment.payment_date + timedelta(days=1)
-                elif latest_payment.plan == 'monthly':
-                    expiry_date = latest_payment.payment_date + timedelta(days=30)
-                elif latest_payment.plan == 'quarterly':
-                    expiry_date = latest_payment.payment_date + timedelta(days=90)
-                elif latest_payment.plan == 'biannually':
-                    expiry_date = latest_payment.payment_date + timedelta(days=182)
-                elif latest_payment.plan == 'annually':
-                    expiry_date = latest_payment.payment_date + timedelta(days=365)
-                else:  # student package
-                    expiry_date = latest_payment.payment_date + timedelta(days=30)
-                
-                # Check if membership has expired
-                if timezone.now().date() > expiry_date:
-                    return JsonResponse({
-                        'status': 'error',
-                        'message': 'Your membership has expired. Please renew to continue.'
-                    }, status=400)
-            else:
-                return JsonResponse({
-                    'status': 'error',
-                    'message': 'No active membership found. Please make a payment.'
-                }, status=400)
-
-        except Member.DoesNotExist:
+        # Try to get the member by name
+        members = Member.objects.filter(
+            Q(first_name__icontains=member_name) |
+            Q(last_name__icontains=member_name) |
+            # Also search for full name matches
+            Q(first_name__icontains=member_name.split()[0]) if ' ' in member_name else Q(),
+            Q(last_name__icontains=member_name.split()[-1]) if ' ' in member_name else Q()
+        ).distinct()
+        
+        if members.count() == 0:
             return JsonResponse({
                 'status': 'error',
-                'message': 'Member not found. Please check the phone number.'
+                'message': 'Member not found. Please check the name.'
             }, status=404)
+        elif members.count() > 1:
+            # Return list of matching members
+            matches = [{
+                "name": f"{m.first_name} {m.last_name}",
+                "phone": m.phone_number
+            } for m in members]
+            return JsonResponse({
+                'status': 'multiple_matches',
+                'message': 'Multiple members found. Please select one:',
+                'matches': matches
+            }, status=300)
+        
+        member = members.first()
+            
+        # Check if member is frozen
+        if member.is_frozen:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'This membership is currently frozen. Please contact staff.'
+            }, status=400)
+        
+        # Check if member is inactive
+        if not member.is_active:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'This membership is inactive. Please renew your membership.'
+            }, status=400)
+        
+        # Check membership expiry
+        latest_payment = PaymentDetails.objects.filter(member=member).order_by('-payment_date').first()
+        
+        if latest_payment:
+            # Calculate expiry based on plan
+            if latest_payment.plan == 'daily':
+                expiry_date = latest_payment.payment_date + timedelta(days=1)
+            elif latest_payment.plan == 'monthly':
+                expiry_date = latest_payment.payment_date + timedelta(days=30)
+            elif latest_payment.plan == 'quarterly':
+                expiry_date = latest_payment.payment_date + timedelta(days=90)
+            elif latest_payment.plan == 'biannually':
+                expiry_date = latest_payment.payment_date + timedelta(days=182)
+            elif latest_payment.plan == 'annually':
+                expiry_date = latest_payment.payment_date + timedelta(days=365)
+            elif latest_payment.plan == 'student':
+                expiry_date = latest_payment.payment_date + timedelta(days=30)
+            else:  # complete payment
+                expiry_date = latest_payment.payment_date + timedelta(days=365)
+            
+            # Check if membership has expired
+            if timezone.now().date() > expiry_date:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Your membership has expired. Please renew to continue.'
+                }, status=400)
+        else:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'No active membership found. Please make a payment.'
+            }, status=400)
 
         # Create check-in/out record
         record = CheckInOutRecord.objects.create(
@@ -531,6 +571,7 @@ def check_in_out(request):
             'message': f'Member {member} {action.lower()}ed successfully!',
             'record': {
                 'member_id': member.id,
+                'member': f"{member.first_name} {member.last_name}",
                 'action': record.get_action_display(),
                 'timestamp': record.timestamp.strftime('%Y-%m-%d %H:%M:%S')
             }
@@ -541,19 +582,41 @@ def check_in_out(request):
             'status': 'error', 
             'message': str(e)
         }, status=500)
-
+        
+        
 def get_member_history(request):
     """
-    Retrieve member check-in/out history. If no member ID is provided,
-    return all recent records.
+    Retrieve member check-in/out history. Search by name or phone number.
+    If no identifier is provided, return all recent records.
     """
-    member_id = request.GET.get('id', '').strip()
+    member_identifier = request.GET.get('id', '').strip()
     
     try:
-        if member_id:
-            # Get specific member's records
-            member = Member.objects.get(phone_number=member_id)
-            records = member.CheckinOut.all().order_by('-timestamp')
+        if member_identifier:
+            # Try to find member(s) by name or phone
+            members = Member.objects.filter(
+                Q(phone_number=member_identifier) |
+                Q(first_name__icontains=member_identifier) |
+                Q(last_name__icontains=member_identifier) |
+                # Handle full name search
+                Q(first_name__icontains=member_identifier.split()[0]) if ' ' in member_identifier else Q(),
+                Q(last_name__icontains=member_identifier.split()[-1]) if ' ' in member_identifier else Q()
+            ).distinct()
+
+            if not members.exists():
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Member not found'
+                }, status=404)
+            
+            if members.count() > 1:
+                # If multiple members found, return first page of combined records
+                records = CheckInOutRecord.objects.filter(
+                    member__in=members
+                ).order_by('-timestamp')
+            else:
+                # Single member found
+                records = members.first().CheckinOut.all().order_by('-timestamp')
         else:
             # Get all records
             records = CheckInOutRecord.objects.all().order_by('-timestamp')
@@ -562,32 +625,25 @@ def get_member_history(request):
         page_number = request.GET.get('page', 1)
         paginator = Paginator(records, 10)  # 10 records per page
         page_obj = paginator.get_page(page_number)
-
+        
         return JsonResponse({
             'status': 'success',
-            'records': [
-                {
-                    'member': str(record.member),
-                    'action': record.get_action_display(),
-                    'timestamp': record.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
-                } for record in page_obj
-            ],
+            'records': [{
+                'member': str(record.member),
+                'action': record.get_action_display(),
+                'timestamp': record.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
+            } for record in page_obj],
             'total_pages': paginator.num_pages,
             'current_page': page_obj.number
         })
-
-    except Member.DoesNotExist:
-        return JsonResponse({
-            'status': 'error', 
-            'message': 'Member not found'
-        }, status=404)
+        
     except Exception as e:
         return JsonResponse({
             'status': 'error',
             'message': str(e)
         }, status=500)
-
-
+        
+        
 def finance(request):
     return render(request,"finance.html")
 
@@ -1007,11 +1063,13 @@ def new_expense(request):
     if request.method == "POST":
         expense = request.POST.get('expense')
         amount = request.POST.get('amount')
+        details = request.POST.get('details')
         
         try:
             Expense.objects.create(
                 expense_type=expense,
-                amount=amount
+                amount=amount,
+                details = details
             )
             messages.success(request, 'Expense saved successfully!')
             return redirect('Expenses')

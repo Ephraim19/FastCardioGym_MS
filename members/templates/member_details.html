@@ -1,7 +1,7 @@
 {% extends 'sidebar.html' %}
 {% load static %}
 
-{% block title %}Fastcardio - Member profile{% endblock %}
+{% block title %}FastCardio - Member profile{% endblock %}
 
 {% block extra_styles %}
     <link rel="stylesheet" href="{% static 'member_details.css' %}">
@@ -12,7 +12,7 @@
         <div class="profile-header">
             <div class="profile-header-left">
                 <h1>
-                    {{ member.first_name }} {{ member.last_name }} -
+                    {{ member.first_name }} {{ member.last_name }} (F#{{ member.id }}) -
                     {% if balance < 0 %}
                     <span style="font-size: medium;" class="status-badge status-{{ membership_status|lower }}">  Debt </span>
                     {% else %}

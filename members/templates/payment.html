@@ -2,7 +2,7 @@
 {% extends 'sidebar.html' %}
 {% load static %}
 
-{% block title %}Fastcardio - Payment{% endblock %}
+{% block title %}FastCardio - Payment{% endblock %}
 
 {% block extra_styles %}
     <link rel="stylesheet" href="{% static 'styles.css' %}">
@@ -47,7 +47,7 @@
       {% endif %}
       
       <div class="form-group">
-        <label for="code">Payment code or number</label>
+        <label for="code">Payment code or Phone number</label>
         <input type="text" name = "code" id="code" placeholder="Payment code or number" required >
       </div>
 
@@ -55,7 +55,7 @@
 
 
     </form>
-
+{% comment %} 
     <form method="post" action="{% url 'Members' %}" >
       {% csrf_token %}
       <div class="form-group">
@@ -63,7 +63,7 @@
 
       </div>
       <button type="submit" class="login-button">Pay later</button>
-    </form>
+    </form> {% endcomment %}
 
 
   </div>

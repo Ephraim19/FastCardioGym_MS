@@ -7,6 +7,7 @@ class Member(models.Model):
     last_name = models.CharField(max_length=50)
     phone_number = models.CharField(max_length=15)
     date_joined = models.DateTimeField(auto_now_add=True)
+    membership_expiry = models.DateField(null=True, blank=True, help_text="Date when the membership expires")
     is_active = models.BooleanField(default=False)
     is_frozen = models.BooleanField(default=False)
     additional_info = models.TextField(blank=True,null=True)
@@ -20,11 +21,8 @@ class Member(models.Model):
 
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
-
-    # def update_balance(self, amount_difference):
-    #     self.balance += amount_difference
-    #     self.save()
-
+    
+    
 
     
 class PaymentDetails(models.Model):
@@ -107,7 +105,8 @@ class Freeze_member(models.Model):
 
 class Expense(models.Model):
     amount = models.DecimalField(max_digits=10, decimal_places=2)
-    expense_type = models.TextField()
+    expense_type = models.CharField(max_length=20 )
+    details = models.TextField()
     date = models.DateField(auto_now_add=True)
     
     class Meta:
@@ -161,17 +160,5 @@ class MemberProgress(models.Model):
 
     def __str__(self):
         return f"{self.member} - Progress on {self.date}"
-
-# class GymReminder(models.Model):
-#     CATEGORY_CHOICES = (
-#         ('attendance', 'Attendance'),
-#         ('subscription', 'Subscription'),
-#     )
     
-#     member = models.ForeignKey('Member', on_delete=models.CASCADE)
-#     category = models.CharField(max_length=20, choices=CATEGORY_CHOICES)
-#     reminder = models.TextField()
-#     created_at = timezone.now()
-#     is_sent = models.BooleanField(default=False)
-#     sent_manually = models.BooleanField(default=False)
-#     sent_date = models.DateTimeField(null=True, blank=True)
+    

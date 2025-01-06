@@ -2,7 +2,7 @@
 {% extends 'sidebar.html' %}
 {% load static %}
 
-{% block title %}Fastcardio - Expenses{% endblock %}
+{% block title %}FastCardio - Expenses{% endblock %}
 
 {% block extra_styles %}
     <link rel="stylesheet" href="{% static 'styles.css' %}">
@@ -29,6 +29,11 @@
             <option value="maintenance">Maintenance</option>
             <option value="other">Other</option>
         </select>
+    </div>
+
+    <div class="form-group">
+      <label for="details">Details</label>
+      <input type="text" name = "details" id="details" placeholder="Expense details" required>
     </div>
 
       <div class="form-group">
