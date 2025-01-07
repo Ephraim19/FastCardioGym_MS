@@ -1751,3 +1751,9 @@ def member_status(request):
         }
     }
     return render(request, 'status.html', context)
+
+def tasks(request):
+    return render(request,'tasks.html')
+
+# def add_task(request):
+    r

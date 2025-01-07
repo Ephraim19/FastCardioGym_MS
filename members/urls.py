@@ -40,4 +40,7 @@ urlpatterns = [
     path('reports/download/',views.download_report,name="download report" ),
     
     path('status/', views.member_status, name='member_status'),
+    
+    path('tasks/', views.tasks, name = "Tasks"),
+    # path('tasks/add/', views.add_task, name = "add_task" )
 ]
