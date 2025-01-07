@@ -15,42 +15,33 @@
         </div>
 
         <div class="task-grid">
-            <div class="task-card">
-                <div class="task-header">
-                    <h3 class="task-title">Review Membership Applications</h3>
-                    <span class="task-priority priority-high">High Priority</span>
-                </div>
-                <p class="task-description">Review and approve pending membership applications for new gym members.</p>
-                <div class="task-meta">
-                    <span class="task-due">Due: Today</span>
-                    <button class="action-btn">Start Task</button>
-                </div>
-            </div>
 
+            {% for task in tasks %}
             <div class="task-card">
                 <div class="task-header">
-                    <h3 class="task-title">Equipment Maintenance Check</h3>
-                    <span class="task-priority priority-medium">Medium Priority</span>
+                    <h3 class="task-title">{{ task.title }}</h3>
+                    <span class="priority priority-{{ task.priority }}">{{ task.priority|title }}</span>
                 </div>
-                <p class="task-description">Perform monthly maintenance check on cardio equipment in Zone A.</p>
+                <p class="task-description">{{ task.description }}</p>
                 <div class="task-meta">
-                    <span class="task-due">Due: Tomorrow</span>
-                    <button class="action-btn">Start Task</button>
+                    <span class="task-due">Due: {{ task.due_date|date:"d M, Y" }}</span>
+                    <div>
+                        <form method="POST" action="{% url 'update_task' task.id %}" style="display: inline;">
+                            {% csrf_token %}
+                            <button class="action-btn">
+                                {% if task.status == 'pending' %}Complete{% else %}Reopen{% endif %}
+                            </button>
+                        </form>
+                        <form method="POST" action="{% url 'delete_task' task.id %}" style="display: inline;">
+                            {% csrf_token %}
+                            <button class="action-btn">Delete</button>
+                        </form>
+                    </div>
                 </div>
             </div>
-
-            <div class="task-card">
-                <div class="task-header">
-                    <h3 class="task-title">Update Class Schedule</h3>
-                    <span class="task-priority priority-low">Low Priority</span>
-                </div>
-                <p class="task-description">Update the weekly class schedule for the upcoming month.</p>
-                <div class="task-meta">
-                    <span class="task-due">Due: Next Week</span>
-                    <button class="action-btn">Start Task</button>
-                </div>
-            </div>
+            {% endfor %}
         </div>
+
     </div>
 
     <!-- Add Task Modal -->
@@ -60,18 +51,20 @@
                 <h2>Add New Task</h2>
                 <button class="close-btn" onclick="closeModal()">&times;</button>
             </div>
-            <form id="addTaskForm">
+
+            <form id="addTaskForm" method = "POST" action = "{% url 'add_task'%}">
+                {% csrf_token%}
                 <div class="form-group">
                     <label for="taskTitle">Task Title</label>
-                    <input type="text" id="taskTitle" required>
+                    <input type="text" id="taskTitle" name = "title" required>
                 </div>
                 <div class="form-group">
                     <label for="taskDescription">Description</label>
-                    <textarea id="taskDescription" required></textarea>
+                    <textarea id="taskDescription" name = "description" required></textarea>
                 </div>
                 <div class="form-group">
                     <label for="taskPriority">Priority</label>
-                    <select id="taskPriority" required>
+                    <select id="taskPriority" name = "priority" required>
                         <option value="high">High</option>
                         <option value="medium">Medium</option>
                         <option value="low">Low</option>
@@ -79,7 +72,7 @@
                 </div>
                 <div class="form-group">
                     <label for="taskDue">Due Date</label>
-                    <input type="date" id="taskDue" required>
+                    <input type="date" id="taskDue" name = "due_date" required>
                 </div>
                 <div class="button-group">
                     <button type="submit" class="add-task-btn">Create Task</button>
@@ -96,7 +89,7 @@
         function closeModal() {
             document.getElementById('addTaskModal').style.display = 'none';
         }
-
+{% comment %} 
         document.getElementById('addTaskForm').addEventListener('submit', function(e) {
             e.preventDefault();
             // Here you would typically:
@@ -106,7 +99,7 @@
             // 4. Close modal
             alert('Task created successfully!');
             closeModal();
-        });
+        }); {% endcomment %}
 
         // Close modal when clicking outside
         window.onclick = function(event) {

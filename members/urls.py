@@ -42,5 +42,7 @@ urlpatterns = [
     path('status/', views.member_status, name='member_status'),
     
     path('tasks/', views.tasks, name = "Tasks"),
-    # path('tasks/add/', views.add_task, name = "add_task" )
+    path('tasks/add/', views.add_task, name = "add_task" ),
+    path('update_task/<int:task_id>/', views.update_task, name='update_task'),
+    path('delete_task/<int:task_id>/', views.delete_task, name='delete_task'),
 ]

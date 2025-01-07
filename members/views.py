@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse, JsonResponse
 from django.contrib.auth.models import User
-from .models import Member, PaymentDetails, CheckInOutRecord, gym_reminder, Freeze_member, Expense, MemberProgress
+from .models import Member, PaymentDetails, CheckInOutRecord, gym_reminder, Freeze_member, Expense, MemberProgress, Task
 from django.contrib import messages
 from django.db.models import Count, Avg, Sum, Max, Min, F, Q, ExpressionWrapper, FloatField
 from django.views.decorators.http import require_http_methods
@@ -1753,7 +1753,38 @@ def member_status(request):
     return render(request, 'status.html', context)
 
 def tasks(request):
-    return render(request,'tasks.html')
+    tasks = Task.objects.all()
+    return render(request,'tasks.html',{'tasks':tasks})
 
-# def add_task(request):
-    r
+def add_task(request):
+    
+    if request.method == 'POST':
+        title = request.POST.get('title')
+        description = request.POST.get('description')
+        priority = request.POST.get('priority')
+        due_date = request.POST.get('due_date')
+        
+        task = Task.objects.create(
+            title= title,
+            description= description,
+            priority=priority,
+            due_date=due_date
+        )
+        
+        task.save()
+        messages.success(request, "Task added successfully")
+    
+    return redirect('Tasks')
+    
+    
+def update_task(request, task_id):
+    if request.method == 'POST':
+        task = Task.objects.get(id=task_id)
+        task.status = 'completed' if task.status == 'pending' else 'pending'
+        task.save()
+    return redirect('Tasks')
+
+def delete_task(request, task_id):
+    if request.method == 'POST':
+        Task.objects.filter(id=task_id).delete()
+    return redirect('Tasks')
