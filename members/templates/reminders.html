@@ -43,6 +43,7 @@
                     ${phoneInfo}
                     <p><strong>Days Since Last Visit:</strong> ${reminder.days_absent}</p>
                     <p><strong>Status:</strong> Active Membership</p>
+                    <p><strong>Message:</strong> ${reminder.message}</p>
                 `;
             } else if (reminder.type === 'subscription') {
                 statusClass = 'subscription-reminder';
@@ -53,6 +54,7 @@
                     <p><strong>Days Until Expiry:</strong> ${reminder.days_until_expiry}</p>
                     <p><strong>Expiry Date:</strong> ${reminder.expiry_date}</p>
                     <p><strong>Last Attended:</strong> ${lastAttended}</p>
+                    <p><strong>Message:</strong> ${reminder.message}</p>
                 `;
             } else if (reminder.category) {
                 statusClass = 'sent-reminder';

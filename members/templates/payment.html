@@ -1,4 +1,3 @@
-
 {% extends 'sidebar.html' %}
 {% load static %}
 
@@ -10,97 +9,91 @@
 
 {% block content %}
   <div class="login-container">
-
-    <h1 style="font-size: large;" >Payments </h1>
-
+    <h1 style="font-size: large;">Payments</h1>
     <div style="margin-bottom: 10px; background-color: #ffe6f2; border: 1px solid #ff69b4; border-radius: 8px; padding: 15px; font-size: 18px; font-weight: bold; color: #333; text-align: left; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);">
-      <p id="name-amount" style="font-size: medium; color: #282526;">Name: {{ member.first_name }} {{ member.last_name }} , Total:  Ksh 0 </p>
+      <p id="name-amount" style="font-size: medium; color: #282526;">Name: {{ member.first_name }} {{ member.last_name }} , Total: Ksh 0</p>
     </div>
-    
-  
-    <form method="post" >
-      {% csrf_token %}
 
+    <form method="post">
+      {% csrf_token %}
       <div class="form-group">
         <label for="plan">Payment plan</label>
         <select name="plan" id="plan" onchange="updateAmount()" required>
-            <option value="" disabled selected>Select a payment plan</option>
-            <option value="daily">Daily</option>
-            <option value="monthly">Monthly</option>
-            <option value="quarterly">Quarterly</option>
-            <option value="biannually">Biannually</option>
-            <option value="yearly">Yearly</option>
-            <option value="student">Student Package</option>
-            <option value="complete">Complete Payment</option>
+          <option value="" disabled selected>Select a payment plan</option>
+          <option value="daily">Daily</option>
+          <option value="monthly">Monthly</option>
+          <option value="quarterly">Quarterly</option>
+          <option value="biannually">Biannually</option>
+          <option value="yearly">Yearly</option>
+          <option value="student">Student Package</option>
+          <option value="complete">Complete Payment</option>
         </select>
-    </div>
+      </div>
 
       <div class="form-group">
         <label for="amount">Amount Paid (Ksh)</label>
-        <input type="number" name = "amount" id="amount" placeholder="Amount (Ksh)" required>
+        <input type="number" name="amount" id="amount" placeholder="Amount (Ksh)" required onchange="checkPayment()">
       </div>
 
-      {% if member.balance != 0 %}
+      {% if member.balance != 0%}
       <div style="margin-bottom: 10px; background-color: #ffe6f2; border: 1px solid #ff69b4; border-radius: 8px; padding: 15px; font-size: 18px; font-weight: bold; color: #333; text-align: left; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);">
-        <p id="name-amount" style="font-size: medium; color: #282526;">Balance: {{ member.balance }} </p>
+        <p id="name-amount" style="font-size: medium; color: #282526;">Previous balance: {{ member.balance }}  </p>
       </div>
-      {% endif %}
-      
+      {% endif%}
+
       <div class="form-group">
         <label for="code">Payment code or Phone number</label>
-        <input type="text" name = "code" id="code" placeholder="Payment code or number" required >
+        <input type="text" name="code" id="code" placeholder="Payment code or number" required>
+      </div>
+
+
+      <div id="due-date-group" class="form-group" style="display: none;">
+        <div style="margin-bottom: 10px; background-color: #ffe6f2; border: 1px solid #ff69b4; border-radius: 8px; padding: 15px;">
+          <p id="balance-text" style="font-size: medium; color: #282526;"></p>
+          <div class="form-group">
+            <label for="due-date">Balance Due Date</label>
+            <input type="date" name="due_date" id="due-date" >
+          </div>
+        </div>
       </div>
 
       <button type="submit" class="login-button">Submit</button>
-
-
     </form>
-{% comment %} 
-    <form method="post" action="{% url 'Members' %}" >
-      {% csrf_token %}
-      <div class="form-group">
-        <p style="display: block; text-align: center; margin-top: -17% ;">OR</p>
-
-      </div>
-      <button type="submit" class="login-button">Pay later</button>
-    </form> {% endcomment %}
-
-
   </div>
 
   <script>
+    let currentAmount = 0;
+    
     function updateAmount() {
       const plan = document.getElementById('plan').value;
       const nameAmount = document.getElementById('name-amount');
-      let amount = 0;
-  
-      // Set the amount based on the selected plan
+
       switch (plan) {
-        case 'daily':
-          amount = 500;
-          break;
-        case 'monthly':
-          amount = 4000;
-          break;
-        case 'quarterly':
-          amount = 10500;
-          break;
-        case 'biannually':
-          amount = 21000;
-          break;
-        case 'yearly':
-          amount = 42000;
-          break;
-        case 'student':
-          amount = 3000;
-          break;
-        default:
-          amount = 0;
+        case 'daily': currentAmount = 500; break;
+        case 'monthly': currentAmount = 4000; break;
+        case 'quarterly': currentAmount = 10500; break;
+        case 'biannually': currentAmount = 21000; break;
+        case 'yearly': currentAmount = 42000; break;
+        case 'student': currentAmount = 3000; break;
+        default: currentAmount = 0;
       }
-  
-      // Update the <p> content with the new amount
-      nameAmount.textContent = `Name: {{ member.first_name }} {{ member.last_name }} , Amount: Ksh ${amount}`;
+
+      nameAmount.textContent = `Name: {{ member.first_name }} {{ member.last_name }} , Amount: Ksh ${currentAmount}`;
+      checkPayment();
+    }
+
+    function checkPayment() {
+      const amountPaid = parseFloat(document.getElementById('amount').value) || 0;
+      const dueDateGroup = document.getElementById('due-date-group');
+      const balanceText = document.getElementById('balance-text');
+      
+      if (amountPaid < currentAmount && currentAmount > 0) {
+        const balance = currentAmount - amountPaid;
+        dueDateGroup.style.display = 'block';
+        balanceText.textContent = `Balance: Ksh ${balance}`;
+      } else {
+        dueDateGroup.style.display = 'none';
+      }
     }
   </script>
-
 {% endblock %}

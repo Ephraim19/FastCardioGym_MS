@@ -204,33 +204,29 @@ def save_member(request):
 
 
 def save_payment(request, member_id=None):
-    # Option 1: Use session to get member ID
     if member_id is None:
         member_id = request.session.get('new_member_id')
     
-    # Get the member
     try:
         member = get_object_or_404(Member, id=member_id)
     except:
         return HttpResponse("Member not found")
     
     if request.method == "POST":
-        # Remove session variable after use
         if 'new_member_id' in request.session:
             del request.session['new_member_id']
         
         plan = request.POST.get('plan')
         amount = Decimal(request.POST.get('amount'))
         transaction_id = request.POST.get('code')
+        balance_due_date = request.POST.get('due_date')
         
-        # Get expected amount for the chosen plan
         expected_amount = PLAN_PRICES.get(plan)
         
         if expected_amount is None and plan != 'complete':
             messages.error(request, 'Invalid plan selected!')
             return redirect("Members")
         
-        # Create payment record
         PaymentDetails.objects.create(
             member=member,
             plan=plan,
@@ -238,7 +234,6 @@ def save_payment(request, member_id=None):
             transaction_id=transaction_id
         )
         
-        # Calculate and update membership expiry date
         if plan != 'complete':
             expiry_periods = {
                 'daily': timedelta(days=1),
@@ -250,22 +245,23 @@ def save_payment(request, member_id=None):
             }
             
             current_date = timezone.now().date()
-            
-            # If membership is expired, start from today
-            # If membership is active, add to current expiry date
             start_date = max(current_date, member.membership_expiry or current_date)
             new_expiry = start_date + expiry_periods.get(plan, timedelta(0))
             member.membership_expiry = new_expiry
         
-        # Calculate difference between paid and expected amount
         if plan == 'complete':
             difference = amount + member.balance
             member.balance = difference
         else:
             difference = amount - expected_amount
             member.balance = difference
+            
+            # Set balance due date if there's an underpayment
+            if difference < 0 and balance_due_date:
+                member.balance_due_date = balance_due_date
+            elif difference >= 0:
+                member.balance_due_date = None
         
-        # Update member status based on payment and balance
         if plan != 'complete':
             if amount >= expected_amount or (amount + member.balance >= expected_amount):
                 member.is_active = True
@@ -274,15 +270,14 @@ def save_payment(request, member_id=None):
                         f'Overpayment of {difference:.2f} recorded. Current balance: {member.balance:.2f}')
             else:
                 member.is_active = True
-                messages.warning(request, 
-                    f'Underpayment of {abs(difference):.2f}. Current balance: {member.balance:.2f}.')
+                messages.warning(request,
+                    f'Underpayment of {abs(difference):.2f} due by {balance_due_date}. Current balance: {member.balance:.2f}.')
         else:
             member.is_active = True
             messages.success(request, f'Complete payment of {amount:.2f} recorded. Balance: {member.balance:.2f}')
         
         member.save()
         
-        # Success message with expiry information
         messages.success(request, 
             f'Payment saved successfully for {member}! '
             f'Membership is active until {member.membership_expiry.strftime("%Y-%m-%d")}.')
@@ -787,14 +782,15 @@ def reminders(request):
                 'phone': reminder.member.phone_number,
                 'reminder': reminder.reminder,
                 'sent_date': reminder.created_at.strftime('%Y-%m-%d'),
-                'category': reminder.get_category_display()
+                'category': reminder.get_category_display(),
+                
             } for reminder in sent_reminders]
             return JsonResponse({'reminders': reminders_data})
         
         elif reminder_type == 'attendance':
-            seven_days_ago = timezone.now() - timedelta(days=7)
+            seven_days_ago = timezone.now() - timedelta(days=5)
             
-            # Get members who haven't checked in for 7 days
+            # Get members who haven't checked in for 5 days
             inactive_members = Member.objects.filter(
                 is_active=True,
                 is_frozen=False
@@ -819,7 +815,8 @@ def reminders(request):
                         'name': f"{member.first_name} {member.last_name}",
                         'phone': member.phone_number,
                         'type': 'attendance',
-                        'days_absent': days_absent or 'Never attended'
+                        'days_absent': days_absent or 'Never attended',
+                        'message': f"Hi {member.first_name} {member.last_name}. It's been {days_absent} days since you last visited the gym. Please visit soon"
                     })
             return JsonResponse({'reminders': reminders_data})
             
@@ -857,7 +854,9 @@ def reminders(request):
                             'type': 'subscription',
                             'days_until_expiry': days_until_expiry,
                             'last_attended': last_checkin.timestamp if last_checkin else None,
-                            'expiry_date': expiry_date.strftime('%Y-%m-%d')
+                            'expiry_date': expiry_date.strftime('%Y-%m-%d'),
+                            'message': f"Hi {member.first_name} {member.last_name}. Your membership expires in {days_until_expiry}. Please renew to continue accessing our facilty"
+                            'message' 
                         })
             
             return JsonResponse({'reminders': reminders_data})

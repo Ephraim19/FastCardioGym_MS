@@ -18,6 +18,7 @@ class Member(models.Model):
         default=0,
         help_text="Positive balance indicates credit, negative indicates debt"
     )
+    balance_due_date = models.DateField(null = True, blank=True)
 
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
@@ -94,7 +95,7 @@ class gym_reminder(models.Model):
         ordering = ['-created_at']
     
     def __str__(self):
-        return f"{self.member} - {self.reminder_date}"
+        return f"{self.member} - {self.reminder}"
     
     
 class Freeze_member(models.Model):
