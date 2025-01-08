@@ -57,12 +57,19 @@ def custom_authenticate(request):
 def custom_logout(request):
     logout(request)
     return redirect('login') 
-
 def dashboard(request):
     today = timezone.now().date()
     thirty_days_ago = today - timedelta(days=30)
     one_weeks_ago = today - timedelta(days=7)
 
+    # Deactivate members with overdue balance
+    overdue_members = Member.objects.filter(
+        balance_due_date__lt=today,
+        balance__lt=0,
+        is_active=True
+    )
+    overdue_members.update(is_active=False)
+    
     # All Members count
     all_members = Member.objects.count()
     new_members_last_month = Member.objects.filter(
@@ -134,6 +141,7 @@ def dashboard(request):
         id__in=attending_member_ids
     ).filter(is_active=True).count()
 
+    # Add overdue members to context
     context = {
         'all_members': {
             'value': all_members,
@@ -152,7 +160,7 @@ def dashboard(request):
             'change': 'Today'
         },
         'expired_members': {
-            'value': expired_count,
+            'value': expired_count + overdue_members.count(),
             'change': 'Action needed'
         },
         'frozen_members': {
