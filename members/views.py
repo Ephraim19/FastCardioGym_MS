@@ -476,93 +476,73 @@ def checkin(request):
 @require_http_methods(["POST"])
 def check_in_out(request):
     """
-    Handle check-in and check-out actions via AJAX with member lookup by name
+    Handle check-in and check-out actions via AJAX with member status validation
     """
     try:
-        # Get member name from request
-        member_name = request.POST.get('id', '').strip()
+        # Get member ID from request
+        member_id = request.POST.get('id', '').strip()
         action = request.POST.get('action', '').strip()
 
         # Validate inputs
-        if not member_name:
+        if not member_id:
             return JsonResponse({
                 'status': 'error', 
-                'message': 'Please enter a member name'
+                'message': 'Please enter a Member ID'
             }, status=400)
 
-        # Try to get the member by name
-        members = Member.objects.filter(
-            Q(first_name__icontains=member_name) |
-            Q(last_name__icontains=member_name) |
-            # Also search for full name matches
-            Q(first_name__icontains=member_name.split()[0]) if ' ' in member_name else Q(),
-            Q(last_name__icontains=member_name.split()[-1]) if ' ' in member_name else Q()
-        ).distinct()
-        
-        if members.count() == 0:
-            return JsonResponse({
-                'status': 'error',
-                'message': 'Member not found. Please check the name.'
-            }, status=404)
-        elif members.count() > 1:
-            # Return list of matching members
-            matches = [{
-                "name": f"{m.first_name} {m.last_name}",
-                "phone": m.phone_number
-            } for m in members]
-            return JsonResponse({
-                'status': 'multiple_matches',
-                'message': 'Multiple members found. Please select one:',
-                'matches': matches
-            }, status=300)
-        
-        member = members.first()
+        # Try to get the member
+        try:
+            member = Member.objects.get(phone_number=member_id)
             
-        # Check if member is frozen
-        if member.is_frozen:
-            return JsonResponse({
-                'status': 'error',
-                'message': 'This membership is currently frozen. Please contact staff.'
-            }, status=400)
-        
-        # Check if member is inactive
-        if not member.is_active:
-            return JsonResponse({
-                'status': 'error',
-                'message': 'This membership is inactive. Please renew your membership.'
-            }, status=400)
-        
-        # Check membership expiry
-        latest_payment = PaymentDetails.objects.filter(member=member).order_by('-payment_date').first()
-        
-        if latest_payment:
-            # Calculate expiry based on plan
-            if latest_payment.plan == 'daily':
-                expiry_date = latest_payment.payment_date + timedelta(days=1)
-            elif latest_payment.plan == 'monthly':
-                expiry_date = latest_payment.payment_date + timedelta(days=30)
-            elif latest_payment.plan == 'quarterly':
-                expiry_date = latest_payment.payment_date + timedelta(days=90)
-            elif latest_payment.plan == 'biannually':
-                expiry_date = latest_payment.payment_date + timedelta(days=182)
-            elif latest_payment.plan == 'annually':
-                expiry_date = latest_payment.payment_date + timedelta(days=365)
-            elif latest_payment.plan == 'student':
-                expiry_date = latest_payment.payment_date + timedelta(days=30)
-            else:  # complete payment
-                expiry_date = latest_payment.payment_date + timedelta(days=365)
-            
-            # Check if membership has expired
-            if timezone.now().date() > expiry_date:
+            # Check if member is frozen
+            if member.is_frozen:
                 return JsonResponse({
                     'status': 'error',
-                    'message': 'Your membership has expired. Please renew to continue.'
+                    'message': 'This membership is currently frozen. Please contact staff.'
                 }, status=400)
-        else:
+            
+            # Check if member is inactive
+            if not member.is_active:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'This membership is inactive. Please renew your membership.'
+                }, status=400)
+            
+            # Check membership expiry
+            latest_payment = PaymentDetails.objects.filter(member=member).order_by('-payment_date').first()
+            
+            if latest_payment:
+                # Calculate expiry based on plan
+                if latest_payment.plan == 'daily':
+                    expiry_date = latest_payment.payment_date + timedelta(days=1)
+                elif latest_payment.plan == 'monthly':
+                    expiry_date = latest_payment.payment_date + timedelta(days=30)
+                elif latest_payment.plan == 'quarterly':
+                    expiry_date = latest_payment.payment_date + timedelta(days=90)
+                elif latest_payment.plan == 'biannually':
+                    expiry_date = latest_payment.payment_date + timedelta(days=182)
+                elif latest_payment.plan == 'annually':
+                    expiry_date = latest_payment.payment_date + timedelta(days=365)
+                else:  # student package
+                    expiry_date = latest_payment.payment_date + timedelta(days=30)
+                
+                # Check if membership has expired
+                if timezone.now().date() > expiry_date:
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': 'Your membership has expired. Please renew to continue.'
+                    }, status=400)
+            else:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'No active membership found. Please make a payment.'
+                }, status=400)
+
+        except Member.DoesNotExist:
             return JsonResponse({
                 'status': 'error',
-                'message': 'No active membership found. Please make a payment.'
-            }, status=400)
+                'message': 'Member not found. Please check the phone number.'
+            }, status=404)
 
         # Create check-in/out record
         record = CheckInOutRecord.objects.create(
@@ -575,7 +555,6 @@ def check_in_out(request):
             'message': f'Member {member} {action.lower()}ed successfully!',
             'record': {
                 'member_id': member.id,
-                'member': f"{member.first_name} {member.last_name}",
                 'action': record.get_action_display(),
                 'timestamp': record.timestamp.strftime('%Y-%m-%d %H:%M:%S')
             }
@@ -586,7 +565,7 @@ def check_in_out(request):
             'status': 'error', 
             'message': str(e)
         }, status=500)
-        
+       
         
 def get_member_history(request):
     """
@@ -653,6 +632,7 @@ def finance(request):
 
 
 class RevenueAndMembershipView(View):
+    
     def get_monthly_revenue_data(self, start_date=None, end_date=None):
         if not end_date:
             end_date = datetime.now().date()
