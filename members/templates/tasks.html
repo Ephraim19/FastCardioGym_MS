@@ -19,7 +19,7 @@
             {% for task in tasks %}
             <div class="task-card">
                 <div class="task-header">
-                    <h3 class="task-title">{{ task.title }}</h3>
+                    <h3 class="task-title">Edit {{ task.title }} for {{ task.member.first_name }} {{ task.member.last_name }}</h3>
                     <span class="priority priority-{{ task.priority }}">{{ task.priority|title }}</span>
                 </div>
                 <p class="task-description">{{ task.description }}</p>
@@ -28,9 +28,16 @@
                     <div>
                         <form method="POST" action="{% url 'update_task' task.id %}" style="display: inline;">
                             {% csrf_token %}
-                            <button class="action-btn">
+                            {% if task.title == 'member data' %}
+                            <button  class="action-btn" onclick="window.open('http://127.0.0.1:8000/admin/members/member/{{task.member.id}}/change/', '_blank')">
                                 {% if task.status == 'pending' %}Complete{% else %}Reopen{% endif %}
                             </button>
+                            {% endif %}
+                            {% if task.title == 'payment data' %}
+                            <button  class="action-btn" onclick="window.open('http://127.0.0.1:8000/admin/members/paymentdetails/', '_blank')">
+                                {% if task.status == 'pending' %}Complete{% else %}Reopen{% endif %}
+                            </button>
+                            {% endif %}
                         </form>
                         <form method="POST" action="{% url 'delete_task' task.id %}" style="display: inline;">
                             {% csrf_token %}
@@ -53,10 +60,29 @@
             </div>
 
             <form id="addTaskForm" method = "POST" action = "{% url 'add_task'%}">
+
                 {% csrf_token%}
+
                 <div class="form-group">
                     <label for="taskTitle">Task Title</label>
-                    <input type="text" id="taskTitle" name = "title" required>
+                    <select class="form-control selectpicker" name = "title" id="taskTitle" required>
+                        <option value="">Select Task Type</option>
+                        
+                        <option value="member data">Edit client data</option>
+                        <option value="payment data">Edit payment data</option>
+
+                        
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="memberSelect">Member</label>
+                    <select class="form-control selectpicker" name = "member" id="memberSelect" data-live-search="true" required>
+                        <option value="">Select Member</option>
+                        {% for member in members %}
+                        <option value="{{ member.id }}">{{ member.first_name }} {{ member.last_name }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
                 <div class="form-group">
                     <label for="taskDescription">Description</label>

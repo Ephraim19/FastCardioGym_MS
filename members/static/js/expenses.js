@@ -67,15 +67,28 @@ function updateDashboard(data) {
     const expenses = data.expenses;
     const totalExpenses = data.total_expenses;
     
-    // Update all expense cards
+    // Update total expenses card
     updateCard('total-card', totalExpenses, previousData?.total_expenses);
-    updateCard('rent-card', expenses.rent || 0, previousData?.expenses?.rent);
-    updateCard('salary-card', expenses.salary || 0, previousData?.expenses?.salary);
-    updateCard('maintenance-card', expenses.maintenance || 0, previousData?.expenses?.maintenance);
-    updateCard('water-card', expenses.water || 0, previousData?.expenses?.water);
-    updateCard('cleaners-card', expenses.cleaners || 0, previousData?.expenses?.cleaners);
-    updateCard('food-card', expenses.food || 0, previousData?.expenses?.food);
-    updateCard('other-card', expenses.other || 0, previousData?.expenses?.other);
+    
+    // Update individual expense cards
+    const expenseTypes = [
+        'rent',
+        'salary',
+        'water',
+        'cleaners',
+        'food',
+        'maintenance',
+        'electricity',
+        'capital-expenditure',
+        'other'
+    ];
+    
+    expenseTypes.forEach(type => {
+        const cardId = `${type}-card`;
+        const currentValue = expenses[type] || 0;
+        const previousValue = previousData?.expenses?.[type];
+        updateCard(cardId, currentValue, previousValue);
+    });
 }
 
 function validateDateRange() {

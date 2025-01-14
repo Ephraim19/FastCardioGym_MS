@@ -55,7 +55,22 @@ body {
   opacity: 0.9;
   font-size: 1.1rem;
 }
-
+.messages {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 15px;
+  border-radius: 5px;
+}
+.messages.error {
+  background-color: #ffdddd;
+  border: 1px solid #ff0000;
+  color: #ff0000;
+}
+.messages.success {
+  background-color: #ddffdd;
+  border: 1px solid #00ff00;
+  color: #008000;
+}
 .content-wrapper {
   padding: 0 2rem;
 }

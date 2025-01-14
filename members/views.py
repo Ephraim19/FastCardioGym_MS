@@ -18,6 +18,27 @@ from django.contrib.auth.decorators import login_required
 import json
 from decimal import Decimal
 from .fastcardio_report import create_fastcardio_report
+from functools import wraps
+
+def allowed_users_only(view_func):
+    @wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        allowed_users = ['FastcardioAdmin']
+        if request.user.username not in allowed_users:
+            # messages.error(request, 'Access denied.')
+            return redirect('New Expense')
+        return view_func(request, *args, **kwargs)
+    return wrapper
+
+def allowed_users_only_1(view_func):
+    @wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        allowed_users = ['FastcardioAdmin']
+        if request.user.username not in allowed_users:
+            messages.error(request, 'Access denied.')
+            return redirect('Dashboard')
+        return view_func(request, *args, **kwargs)
+    return wrapper
 
 
 PLAN_PRICES = {
@@ -325,10 +346,7 @@ def calculate_expiry_date(payment_date, plan):
         return payment_date + timedelta(days=30)  
     
     return None
-from django.shortcuts import get_object_or_404, render
-from django.utils import timezone
-from django.db.models import Count
-from .models import Member, PaymentDetails, CheckInOutRecord, MemberProgress, Freeze_member
+
 
 def member_details(request, member_id):
     """
@@ -626,11 +644,12 @@ def get_member_history(request):
             'message': str(e)
         }, status=500)
         
-        
 def finance(request):
-    return render(request,"finance.html")
-
-
+    allowed_users = ['FastcardioAdmin',]  # Add your allowed usernames
+    if request.user.username not in allowed_users:
+        messages.error(request, 'Access denied.')
+        return redirect('Dashboard')
+    return render(request, "finance.html")
 class RevenueAndMembershipView(View):
     
     def get_monthly_revenue_data(self, start_date=None, end_date=None):
@@ -697,7 +716,7 @@ class RevenueAndMembershipView(View):
         }
         
         # Ensure all expense types are present in the response
-        expense_types = ['rent', 'salary', 'water', 'cleaners', 'food', 'other']
+        expense_types = ['rent', 'salary', 'water', 'cleaners', 'food', 'other','Capital expenditure','electricity','maintenance']
         formatted_expenses = {
             expense_type: expense_data.get(expense_type, 0)
             for expense_type in expense_types
@@ -753,7 +772,6 @@ def calculate_expiry_dates(payment):
     }
     days = plan_durations.get(payment.plan)
     return payment.payment_date + timedelta(days=days)
-
 def reminders(request):
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         reminder_type = request.GET.get('type', 'all')
@@ -771,7 +789,6 @@ def reminders(request):
                 'reminder': reminder.reminder,
                 'sent_date': reminder.created_at.strftime('%Y-%m-%d'),
                 'category': reminder.get_category_display(),
-                
             } for reminder in sent_reminders]
             return JsonResponse({'reminders': reminders_data})
         
@@ -804,7 +821,7 @@ def reminders(request):
                         'phone': member.phone_number,
                         'type': 'attendance',
                         'days_absent': days_absent or 'Never attended',
-                        'message': f"Hi {member.first_name} {member.last_name}. It's been {days_absent} days since you last visited the gym. Please visit soon"
+                        'message': f"Hi {member.first_name}, we miss seeing you at the gym! It's been {days_absent} days since your last visit."
                     })
             return JsonResponse({'reminders': reminders_data})
             
@@ -830,10 +847,25 @@ def reminders(request):
                     expiry_date = calculate_expiry_dates(latest_payment)
                     days_until_expiry = (expiry_date - current_date).days
                     
-                    if 0 <= days_until_expiry <= 7:
+                    # Check for either 3 days before expiry or day of expiry
+                    if days_until_expiry == 3 or days_until_expiry == 0:
                         last_checkin = member.CheckinOut.filter(
                             action='check_in'
                         ).order_by('-timestamp').first()
+                        
+                        # Create appropriate message based on days until expiry
+                        if days_until_expiry == 3:
+                            message = (
+                                f"Hi {member.first_name}, your gym membership expires in 3 days "
+                                f"on {expiry_date.strftime('%B %d, %Y')}. "
+                                "Please renew your membership to continue enjoying our facilities."
+                            )
+                        else:  # days_until_expiry == 0
+                            message = (
+                                f"Hi {member.first_name}, your gym membership expires today. "
+                                "Please visit the reception to renew your membership and "
+                                "continue your fitness journey with us."
+                            )
                         
                         reminders_data.append({
                             'member_id': member.id,
@@ -843,8 +875,7 @@ def reminders(request):
                             'days_until_expiry': days_until_expiry,
                             'last_attended': last_checkin.timestamp if last_checkin else None,
                             'expiry_date': expiry_date.strftime('%Y-%m-%d'),
-                            'message': f"Hi {member.first_name} {member.last_name}. Your membership expires in {days_until_expiry}. Please renew to continue accessing our facilty"
-                            'message' 
+                            'message': message
                         })
             
             return JsonResponse({'reminders': reminders_data})
@@ -876,7 +907,8 @@ def reminders(request):
                         'name': f"{member.first_name} {member.last_name}",
                         'phone': member.phone_number,
                         'type': 'attendance',
-                        'days_absent': days_absent or 'Never attended'
+                        'days_absent': days_absent or 'Never attended',
+                        'message': f"Hi {member.first_name}, we miss seeing you at the gym! It's been {days_absent} days since your last visit."
                     })
             
             # Get subscription reminders
@@ -900,10 +932,25 @@ def reminders(request):
                     expiry_date = calculate_expiry_dates(latest_payment)
                     days_until_expiry = (expiry_date - current_date).days
                     
-                    if 0 <= days_until_expiry <= 7:
+                    # Check for either 3 days before expiry or day of expiry
+                    if days_until_expiry == 3 or days_until_expiry == 0:
                         last_checkin = member.CheckinOut.filter(
                             action='check_in'
                         ).order_by('-timestamp').first()
+                        
+                        # Create appropriate message based on days until expiry
+                        if days_until_expiry == 3:
+                            message = (
+                                f"Hi {member.first_name}, your gym membership expires in 3 days "
+                                f"on {expiry_date.strftime('%B %d, %Y')}. "
+                                "Please renew your membership to continue enjoying our facilities."
+                            )
+                        else:  # days_until_expiry == 0
+                            message = (
+                                f"Hi {member.first_name}, your gym membership expires today. "
+                                "Please visit the reception to renew your membership and "
+                                "continue your fitness journey with us."
+                            )
                         
                         subscription_data.append({
                             'member_id': member.id,
@@ -912,7 +959,8 @@ def reminders(request):
                             'type': 'subscription',
                             'days_until_expiry': days_until_expiry,
                             'last_attended': last_checkin.timestamp if last_checkin else None,
-                            'expiry_date': expiry_date.strftime('%Y-%m-%d')
+                            'expiry_date': expiry_date.strftime('%Y-%m-%d'),
+                            'message': message
                         })
             
             return JsonResponse({
@@ -921,7 +969,6 @@ def reminders(request):
             })
             
     return render(request, 'reminders.html')
-
 def send_reminder(request):
     return JsonResponse({'status': 'success', 'message': 'Reminder sent successfully!'})
 
@@ -1064,8 +1111,8 @@ def unfreeze_member(request, member_id):
     return redirect('Members')
     
 
-
-def expenses(request):
+@allowed_users_only
+def expenses(request): 
     return render(request, 'view_expenses.html')
 
 
@@ -1524,6 +1571,7 @@ def create_reports(start_date, end_date):
     
     return context
 
+@allowed_users_only_1
 def reports(request):
     try:
         start_date = request.GET.get('start_date')
@@ -1741,17 +1789,24 @@ def member_status(request):
 
 def tasks(request):
     tasks = Task.objects.all()
-    return render(request,'tasks.html',{'tasks':tasks})
+    members = Member.objects.all()
+    # payment_id = get_object_or_404(PaymentDetails,member = member)
+    return render(request,'tasks.html',{'tasks':tasks,'members':members})
 
 def add_task(request):
     
     if request.method == 'POST':
+        member = request.POST.get('member')
+        member = get_object_or_404(Member, id=member)
+        
         title = request.POST.get('title')
+        
         description = request.POST.get('description')
         priority = request.POST.get('priority')
         due_date = request.POST.get('due_date')
         
         task = Task.objects.create(
+            member = member,
             title= title,
             description= description,
             priority=priority,

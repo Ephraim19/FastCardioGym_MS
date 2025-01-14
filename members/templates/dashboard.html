@@ -13,7 +13,18 @@
     <div class="header">
         <h1>Fastcardio Dashboard</h1>
         <p>Real-time Membership Analytics</p>
+        
     </div>
+
+    {% if messages %}
+    <div class="messages-container">
+        {% for message in messages %}
+            <div class="messages {% if message.tags %}{{ message.tags }}{% endif %}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    </div>
+{% endif %}
     
     <div class="content-wrapper">
         <div class="grid">

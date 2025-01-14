@@ -175,6 +175,7 @@ class Task(models.Model):
         ('low', 'Low'),
     ]
     
+    member = models.ForeignKey(Member,on_delete=models.CASCADE)
     title = models.CharField(max_length=200)
     description = models.TextField()
     priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES)
