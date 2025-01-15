@@ -5,10 +5,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const checkInBtn = document.querySelector('.check-in-btn');
     const checkOutBtn = document.querySelector('.check-out-btn');
     const memberSelectModal = document.createElement('div');
-    
+
     // Update placeholder text
     memberIdInput.placeholder = "Enter member name";
-    
+
     // Set up member selection modal
     memberSelectModal.className = 'modal';
     memberSelectModal.innerHTML = `
@@ -27,7 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
         statusMessage.textContent = message;
         statusMessage.style.display = 'block';
         statusMessage.className = `status-message ${isSuccess ? 'status-success' : 'status-error'}`;
-        
+
         setTimeout(() => {
             statusMessage.style.display = 'none';
         }, isSuccess ? 5000 : 8000);
@@ -36,25 +36,25 @@ document.addEventListener('DOMContentLoaded', () => {
     function showMemberSelectionModal(matches, action) {
         const memberList = memberSelectModal.querySelector('.member-list');
         memberList.innerHTML = '';
-        
+
         matches.forEach(match => {
             const button = document.createElement('button');
             button.className = 'member-select-btn';
-            button.textContent = match.name;  // Only show name, not phone number
+            button.textContent = match.name; // Only show name, not phone number
             button.onclick = () => {
-                memberIdInput.value = match.name;  // Set the name instead of phone
+                memberIdInput.value = match.name; // Set the name instead of phone
                 memberSelectModal.style.display = 'none';
                 handleCheckInOut(action, true);
             };
             memberList.appendChild(button);
         });
-        
+
         memberSelectModal.style.display = 'flex';
     }
 
     async function handleCheckInOut(action, skipModalCheck = false) {
         const memberName = memberIdInput.value.trim();
-        
+
         if (!memberName) {
             showStatus('Please enter a member name', false);
             return;
@@ -97,7 +97,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Event Listeners
     checkInBtn.addEventListener('click', () => handleCheckInOut('Check In'));
     checkOutBtn.addEventListener('click', () => handleCheckInOut('Check Out'));
-    
+
     memberIdInput.addEventListener('input', (event) => {
         const memberName = event.target.value.trim();
         memberIdInput.classList.remove('error');
@@ -122,5 +122,5 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Load initial records silently
     updateMemberHistory('');
-    
+
 });

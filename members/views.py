@@ -281,6 +281,8 @@ def save_payment(request, member_id=None):
         if plan == 'complete':
             difference = amount + member.balance
             member.balance = difference
+            if difference >= 0:
+                member.membership_expiry = ''
         else:
             difference = amount - expected_amount
             member.balance = difference
@@ -583,7 +585,7 @@ def check_in_out(request):
             'status': 'error', 
             'message': str(e)
         }, status=500)
-       
+             
         
 def get_member_history(request):
     """
@@ -650,6 +652,7 @@ def finance(request):
         messages.error(request, 'Access denied.')
         return redirect('Dashboard')
     return render(request, "finance.html")
+
 class RevenueAndMembershipView(View):
     
     def get_monthly_revenue_data(self, start_date=None, end_date=None):
@@ -716,7 +719,7 @@ class RevenueAndMembershipView(View):
         }
         
         # Ensure all expense types are present in the response
-        expense_types = ['rent', 'salary', 'water', 'cleaners', 'food', 'other','Capital expenditure','electricity','maintenance']
+        expense_types = ['rent', 'salary', 'water', 'cleaners', 'food', 'other','capital','electricity','maintenance']
         formatted_expenses = {
             expense_type: expense_data.get(expense_type, 0)
             for expense_type in expense_types
@@ -739,6 +742,7 @@ class RevenueAndMembershipView(View):
                 }
             for item in monthly_revenue
         ]
+        print(formatted_expenses)
         
         # Create the response data
         response_data = {
@@ -756,7 +760,7 @@ class RevenueAndMembershipView(View):
             'total_expenses': total_expenses,
             'monthly_revenue': monthly_data
         }
-        
+        print(response_data)
         return JsonResponse(response_data)
 
 

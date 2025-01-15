@@ -78,6 +78,20 @@
             <div class="card-value">0</div>
             <div class="card-change">Loading...</div>
         </div>
+
+                
+        <div class="card expense-card" id="electricity-card">
+            <div class="card-title">Electricity</div>
+            <div class="card-value">0</div>
+            <div class="card-change">Loading...</div>
+        </div>
+
+        <div class="card expense-card" id="capital-card">
+            <div class="card-title">Capital expenditure</div>
+            <div class="card-value">0</div>
+            <div class="card-change">Loading...</div>
+        </div>
+                
         
         <div class="card expense-card" id="other-card">
             <div class="card-title">Other Expenses</div>
@@ -161,6 +175,11 @@ function updateDashboard(data) {
     updateCard('water-card', expenses.water || 0, previousData?.expenses?.water);
     updateCard('cleaners-card', expenses.cleaners || 0, previousData?.expenses?.cleaners);
     updateCard('food-card', expenses.food || 0, previousData?.expenses?.food);
+
+    
+    updateCard('electricity-card', expenses.electricity || 0, previousData?.expenses?.electricity);
+    updateCard('capital-card', expenses.Capital || 0, previousData?.expenses?.Capital);
+
     updateCard('other-card', expenses.other || 0, previousData?.expenses?.other);
 }
 

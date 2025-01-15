@@ -69,6 +69,8 @@
                 <ul class="info-list">
                     <li><span class="label">Current Plan:</span> {{ current_plan|title }}</li>
                     <li><span class="label">Balance(Ksh):</span> {{ balance|floatformat:2 }} ({{ balance_status }})</li>
+                    <li><span class="label">Balance due:</span> {{expiry_date}}</li>
+
                     <li><span class="label">Total Paid(Ksh):</span> {{ total_paid|floatformat:2 }}</li>
                     <li><span class="label">Member Since:</span> {{ member.date_joined|date:"F d, Y" }}</li>
                     {% if last_checkin %}
