@@ -498,6 +498,7 @@ def check_in_out(request):
     """
     Handle check-in and check-out actions via AJAX with member status validation
     """
+    
     try:
         # Get member ID from request
         member_id = request.POST.get('id', '').strip()
@@ -532,6 +533,7 @@ def check_in_out(request):
             latest_payment = PaymentDetails.objects.filter(member=member).order_by('-payment_date').first()
             
             if latest_payment:
+                
                 # Calculate expiry based on plan
                 if latest_payment.plan == 'daily':
                     expiry_date = latest_payment.payment_date + timedelta(days=1)
@@ -1834,3 +1836,130 @@ def delete_task(request, task_id):
     if request.method == 'POST':
         Task.objects.filter(id=task_id).delete()
     return redirect('Tasks')
+
+
+
+def checkin_page(request):
+    """Render the check-in/out page"""
+    recent_records = CheckInOutRecord.objects.select_related('member').order_by('-timestamp')[:10]
+    return render(request, 'checkin.html', {'recent_records': recent_records})
+
+@require_http_methods(["GET"])
+def search_members(request):
+    """Search members by name or phone number"""
+    query = request.GET.get('query', '').strip()
+    
+    if len(query) < 2:
+        return JsonResponse([])
+    
+    # Search by name or phone number
+    members = Member.objects.filter(
+        Q(first_name__icontains=query) |
+        Q(last_name__icontains=query) |
+        Q(phone_number__icontains=query)
+    ).filter(is_active=True)[:10]  # Limit to 10 results
+    
+    results = [{
+        'id': member.id,
+        'first_name': member.first_name,
+        'last_name': member.last_name,
+        'phone_number': member.phone_number,
+        'is_active': member.is_active,
+        'membership_expiry': member.membership_expiry.strftime('%Y-%m-%d') if member.membership_expiry else None
+    } for member in members]
+    
+    return JsonResponse(results, safe=False)
+
+@require_http_methods(["GET"])
+def get_member_details(request, member_id):
+    """Get detailed information for a specific member"""
+    try:
+        member = Member.objects.get(id=member_id)
+        
+        # Get the latest check-in/out record
+        latest_record = CheckInOutRecord.objects.filter(member=member).order_by('-timestamp').first()
+        
+        data = {
+            'id': member.id,
+            'first_name': member.first_name,
+            'last_name': member.last_name,
+            'phone_number': member.phone_number,
+            'is_active': member.is_active,
+            'is_frozen': member.is_frozen,
+            'membership_expiry': member.membership_expiry.strftime('%Y-%m-%d') if member.membership_expiry else None,
+            'current_status': latest_record.action if latest_record else None,
+            'last_action_time': latest_record.timestamp.strftime('%Y-%m-%d %H:%M:%S') if latest_record else None
+        }
+        return JsonResponse(data)
+    except Member.DoesNotExist:
+        return JsonResponse({'error': 'Member not found'}, status=404)
+
+@require_http_methods(["POST"])
+def check_in_out(request):
+    """Handle member check-in/out"""
+    try:
+        data = json.loads(request.body)
+        member_id = data.get('member_id')
+        action = data.get('action')
+        
+        if not member_id or action not in ['check_in', 'check_out']:
+            return JsonResponse(
+                {'error': 'Invalid request parameters'}, 
+                status=400
+            )
+        
+        try:
+            member = Member.objects.get(id=member_id)
+            
+            # Validate member status
+            if not member.is_active:
+                return JsonResponse(
+                    {'error': 'Membership is not active'}, 
+                    status=400
+                )
+            
+            if member.is_frozen:
+                return JsonResponse(
+                    {'error': 'Membership is currently frozen'}, 
+                    status=400
+                )
+                
+            if member.membership_expiry and member.membership_expiry < timezone.now().date():
+                return JsonResponse(
+                    {'error': 'Membership has expired'}, 
+                    status=400
+                )
+            
+            # Check if there's already a check-in without a check-out
+            latest_record = CheckInOutRecord.objects.filter(member=member).order_by('-timestamp').first()
+            if latest_record:
+                if action == 'check_in' and latest_record.action == 'check_in':
+                    return JsonResponse(
+                        {'error': 'Member is already checked in'}, 
+                        status=400
+                    )
+                if action == 'check_out' and latest_record.action == 'check_out':
+                    return JsonResponse(
+                        {'error': 'Member is already checked out'}, 
+                        status=400
+                    )
+            
+            # Create new check-in/out record
+            record = CheckInOutRecord.objects.create(
+                member=member,
+                action=action,
+                timestamp=timezone.now()
+            )
+            
+            return JsonResponse({
+                'message': f'Successfully {action.replace("_", "ed ")}',
+                'timestamp': record.timestamp.strftime('%Y-%m-%d %H:%M:%S')
+            })
+            
+        except Member.DoesNotExist:
+            return JsonResponse({'error': 'Member not found'}, status=404)
+            
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON data'}, status=400)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)

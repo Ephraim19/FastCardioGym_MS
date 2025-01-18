@@ -1,126 +1,176 @@
-document.addEventListener('DOMContentLoaded', () => {
-    const memberIdInput = document.getElementById('memberIdInput');
-    const statusMessage = document.getElementById('statusMessage');
-    const historyTableBody = document.getElementById('historyTableBody');
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('memberSearch');
+    const searchResults = document.getElementById('searchResults');
+    const selectedMember = document.getElementById('selectedMember');
     const checkInBtn = document.querySelector('.check-in-btn');
     const checkOutBtn = document.querySelector('.check-out-btn');
-    const memberSelectModal = document.createElement('div');
+    const statusMessage = document.getElementById('statusMessage');
 
-    // Update placeholder text
-    memberIdInput.placeholder = "Enter member name";
+    let selectedMemberId = null;
 
-    // Set up member selection modal
-    memberSelectModal.className = 'modal';
-    memberSelectModal.innerHTML = `
-        <div class="modal-content">
-            <span class="close-button">&times;</span>
-            <h2>Select Member</h2>
-            <div class="member-list"></div>
-        </div>
-    `;
-    document.body.appendChild(memberSelectModal);
+    // Get CSRF token from cookie
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    const csrfToken = getCookie('csrftoken');
 
-    // Get close button element
-    const closeButton = memberSelectModal.querySelector('.close-button');
-
-    function showStatus(message, isSuccess) {
+    function showMessage(message, isError = false) {
         statusMessage.textContent = message;
+        statusMessage.className = `status-message ${isError ? 'status-error' : 'status-success'}`;
         statusMessage.style.display = 'block';
-        statusMessage.className = `status-message ${isSuccess ? 'status-success' : 'status-error'}`;
-
         setTimeout(() => {
             statusMessage.style.display = 'none';
-        }, isSuccess ? 5000 : 8000);
+        }, 5000);
     }
 
-    function showMemberSelectionModal(matches, action) {
-        const memberList = memberSelectModal.querySelector('.member-list');
-        memberList.innerHTML = '';
-
-        matches.forEach(match => {
-            const button = document.createElement('button');
-            button.className = 'member-select-btn';
-            button.textContent = match.name; // Only show name, not phone number
-            button.onclick = () => {
-                memberIdInput.value = match.name; // Set the name instead of phone
-                memberSelectModal.style.display = 'none';
-                handleCheckInOut(action, true);
-            };
-            memberList.appendChild(button);
-        });
-
-        memberSelectModal.style.display = 'flex';
+    function debounce(func, wait) {
+        let timeout;
+        return function(...args) {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => func.apply(this, args), wait);
+        };
     }
 
-    async function handleCheckInOut(action, skipModalCheck = false) {
-        const memberName = memberIdInput.value.trim();
+    async function searchMembers(searchTerm) {
+        try {
+            const response = await fetch(`/search-members/?query=${encodeURIComponent(searchTerm)}`);
+            if (!response.ok) throw new Error('Search failed');
 
-        if (!memberName) {
-            showStatus('Please enter a member name', false);
-            return;
+            const data = await response.json();
+
+            if (data.length > 0) {
+                searchResults.innerHTML = data.map(member => `
+                    <div class="search-result-item" data-member-id="${member.id}">
+                        <div>${member.first_name} ${member.last_name}</div>
+                        <div class="text-sm text-gray-600">${member.phone_number}</div>
+                    </div>
+                `).join('');
+            } else {
+                searchResults.innerHTML = '<div class="search-result-item">No members found</div>';
+            }
+            searchResults.classList.add('active');
+        } catch (error) {
+            console.error('Error searching members:', error);
+            showMessage('Error searching for members', true);
         }
+    }
+
+    async function fetchMemberDetails(memberId) {
+        try {
+            const response = await fetch(`/member-details/${memberId}/`);
+            if (!response.ok) throw new Error('Failed to fetch member details');
+
+            const member = await response.json();
+
+            // Update selected member card
+            const memberNameEl = selectedMember.querySelector('.member-name');
+            const memberPhoneEl = selectedMember.querySelector('.member-phone');
+            const memberStatusEl = selectedMember.querySelector('.member-status');
+
+            memberNameEl.textContent = `${member.first_name} ${member.last_name}`;
+            memberPhoneEl.textContent = member.phone_number;
+
+            // Update status and button states
+            let statusText = 'Status: ';
+            if (!member.is_active) {
+                statusText += 'Inactive Membership';
+                checkInBtn.disabled = checkOutBtn.disabled = true;
+            } else if (member.is_frozen) {
+                statusText += 'Membership Frozen';
+                checkInBtn.disabled = checkOutBtn.disabled = true;
+            } else if (member.membership_expiry && new Date(member.membership_expiry) < new Date()) {
+                statusText += 'Membership Expired';
+                checkInBtn.disabled = checkOutBtn.disabled = true;
+            } else {
+                statusText += member.current_status === 'check_in' ? 'Checked In' : 'Checked Out';
+                checkInBtn.disabled = member.current_status === 'check_in';
+                checkOutBtn.disabled = member.current_status === 'check_out';
+            }
+
+            memberStatusEl.textContent = statusText;
+            selectedMember.style.display = 'block';
+            selectedMemberId = memberId;
+
+        } catch (error) {
+            console.error('Error fetching member details:', error);
+            showMessage('Error fetching member details', true);
+        }
+    }
+
+    async function performCheckInOut(action) {
+        if (!selectedMemberId) return;
 
         try {
-            const response = await fetch('check-in-out/', {
+            const response = await fetch('/check-in-out/', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                    'X-CSRFToken': getCookie('csrftoken')
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
                 },
-                body: `id=${encodeURIComponent(memberName)}&action=${encodeURIComponent(action)}`
+                body: JSON.stringify({
+                    member_id: selectedMemberId,
+                    action: action
+                })
             });
 
             const data = await response.json();
 
-            if (data.status === 'success') {
-                showStatus(data.message, true);
-                updateMemberHistory(memberName);
-                memberIdInput.value = '';
-            } else if (data.status === 'multiple_matches' && !skipModalCheck) {
-                showMemberSelectionModal(data.matches, action);
+            if (response.ok) {
+                showMessage(data.message);
+                // Refresh member details
+                await fetchMemberDetails(selectedMemberId);
+                // Refresh history table
+                location.reload();
             } else {
-                showStatus(data.message || 'An error occurred', false);
-                if (response.status === 404) {
-                    memberIdInput.classList.add('error');
-                    setTimeout(() => memberIdInput.classList.remove('error'), 3000);
-                }
+                showMessage(data.error, true);
             }
         } catch (error) {
-            showStatus('An error occurred while processing your request', false);
-            console.error('Error:', error);
+            console.error('Error during check-in/out:', error);
+            showMessage('Error processing request', true);
         }
     }
 
-    // Rest of the code remains the same...
-    // (getCookie, updateMemberHistory, and event listeners)
-
     // Event Listeners
-    checkInBtn.addEventListener('click', () => handleCheckInOut('Check In'));
-    checkOutBtn.addEventListener('click', () => handleCheckInOut('Check Out'));
+    searchInput.addEventListener('input', debounce(function(e) {
+        const searchTerm = e.target.value.trim();
+        if (searchTerm.length < 2) {
+            searchResults.innerHTML = '';
+            searchResults.classList.remove('active');
+            return;
+        }
+        searchMembers(searchTerm);
+    }, 300));
 
-    memberIdInput.addEventListener('input', (event) => {
-        const memberName = event.target.value.trim();
-        memberIdInput.classList.remove('error');
-        updateMemberHistory(memberName);
-    });
+    searchResults.addEventListener('click', function(e) {
+        const resultItem = e.target.closest('.search-result-item');
+        if (!resultItem) return;
 
-    memberIdInput.addEventListener('keypress', (event) => {
-        if (event.key === 'Enter') {
-            handleCheckInOut('Check In');
+        const memberId = resultItem.dataset.memberId;
+        if (memberId) {
+            fetchMemberDetails(memberId);
+            searchResults.classList.remove('active');
+            searchInput.value = '';
         }
     });
 
-    closeButton.addEventListener('click', () => {
-        memberSelectModal.style.display = 'none';
+    // Close search results when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!searchResults.contains(e.target) && !searchInput.contains(e.target)) {
+            searchResults.classList.remove('active');
+        }
     });
 
-    window.onclick = (event) => {
-        if (event.target === memberSelectModal) {
-            memberSelectModal.style.display = 'none';
-        }
-    };
-
-    // Load initial records silently
-    updateMemberHistory('');
-
+    checkInBtn.addEventListener('click', () => performCheckInOut('check_in'));
+    checkOutBtn.addEventListener('click', () => performCheckInOut('check_out'));
 });

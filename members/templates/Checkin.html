@@ -4,7 +4,7 @@
 {% block title %}FastCardio - Check-In/Out{% endblock %}
 
 {% block extra_styles %}
-    <link rel="stylesheet" href="{% static 'checkin.css' %}">
+<link rel="stylesheet" href="{% static 'checkin.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -15,11 +15,28 @@
     <div class="container">
         <div id="statusMessage" class="status-message" style="display: none;"></div>
         
-        <input type="text" class="member-input" placeholder="Enter member phone number" id="memberIdInput">
+        <div class="search-container">
+            <input 
+                type="text" 
+                class="member-search" 
+                placeholder="Search member by name..." 
+                id="memberSearch"
+                autocomplete="off"
+            >
+            <div class="search-results" id="searchResults"></div>
+        </div>
+
+        <div class="selected-member" id="selectedMember" style="display: none;">
+            <div class="member-card">
+                <h3 class="member-name"></h3>
+                <p class="member-phone"></p>
+                <p class="member-status"></p>
+            </div>
+        </div>
         
         <div class="btn-group">
-            <button class="check-in-btn">Check In</button>
-            <button class="check-out-btn">Check Out</button>
+            <button class="check-in-btn" disabled>Check In</button>
+            <button class="check-out-btn" disabled>Check Out</button>
         </div>
 
         <div class="history-section">
@@ -27,7 +44,7 @@
             <table class="history-table" id="historyTable">
                 <thead>
                     <tr>
-                        <th>name/phone</th>
+                        <th>Name</th>
                         <th>Action</th>
                         <th>Timestamp</th>
                     </tr>

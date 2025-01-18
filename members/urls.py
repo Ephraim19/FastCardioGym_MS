@@ -17,9 +17,14 @@ urlpatterns = [
     path('member/freeze/<int:member_id>/', views.freeze_member, name='freeze'),
     path('member/unfreeze/<int:member_id>/', views.unfreeze_member, name='unfreeze'),
     
-    path('checkin/',views.checkin,name="Checkin" ),
-    path('checkin/check-in-out/', views.check_in_out, name='check_in_out'),
-    path('checkin/member-history/', views.get_member_history, name='member_history'),
+    path('checkin/', views.checkin_page, name='Checkin'),
+    path('search-members/', views.search_members, name='search_members'),
+    path('member-details/<int:member_id>/', views.get_member_details, name='get_member_details'),
+    path('check-in-out/', views.check_in_out, name='check_in_out'),
+    
+    # path('checkin/',views.checkin,name="Checkin" ),
+    # path('checkin/check-in-out/', views.check_in_out, name='check_in_out'),
+    # path('checkin/member-history/', views.get_member_history, name='member_history'),
     
     path('finance/',views.finance,name="Finance" ),
     path('revenue-summary/', views.RevenueAndMembershipView.as_view(), name='revenue-summary'),
