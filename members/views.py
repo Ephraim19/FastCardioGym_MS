@@ -78,123 +78,119 @@ def custom_authenticate(request):
 def custom_logout(request):
     logout(request)
     return redirect('login') 
+
 def dashboard(request):
     today = timezone.now().date()
-    thirty_days_ago = today - timedelta(days=30)
-    one_weeks_ago = today - timedelta(days=7)
-
-    # Deactivate members with overdue balance
-    overdue_members = Member.objects.filter(
-        balance_due_date__lt=today,
-        balance__lt=0,
-        is_active=True
-    )
-    overdue_members.update(is_active=False)
     
-    # All Members count
-    all_members = Member.objects.count()
+    # All members count and change
+    total_members = Member.objects.count()
     new_members_last_month = Member.objects.filter(
-        date_joined__date__gte=thirty_days_ago
+        date_joined__date__gte=today - timedelta(days=30)
     ).count()
-
-    # Check and update expired memberships based on latest payment
-    daily_expiry = today - timedelta(days=0)
-    monthly_expiry = today - timedelta(days=30)
-    quarterly_expiry = today - timedelta(days=90)
-    biannual_expiry = today - timedelta(days=182)
-    yearly_expiry = today - timedelta(days=365)
-    student_expiry = today - timedelta(days=30)
-
-    # Get latest payment for each member
-    latest_payments_subquery = PaymentDetails.objects.filter(
-        member=OuterRef('pk')
-    ).order_by('-payment_date')[:1]
-
-    # Find expired members based on their latest payment
-    expired_members = Member.objects.annotate(
-        latest_payment_date=Subquery(latest_payments_subquery.values('payment_date')),
-        latest_plan=Subquery(latest_payments_subquery.values('plan'))
-    ).filter(
-        Q(latest_plan='daily', latest_payment_date__lt=daily_expiry) |
-        Q(latest_plan='monthly', latest_payment_date__lt=monthly_expiry) |
-        Q(latest_plan='quarterly', latest_payment_date__lt=quarterly_expiry) |
-        Q(latest_plan='biannually', latest_payment_date__lt=biannual_expiry) |
-        Q(latest_plan='annually', latest_payment_date__lt=yearly_expiry) |
-        Q(latest_plan='student', latest_payment_date__lt=student_expiry)
-    )
-
-    # Update expired members to inactive
-    expired_members.update(is_active=False)
-    expired_count = expired_members.count()
-
-    # Active Members (not frozen and is_active)
+    
+    # Active members (not expired and not frozen)
     active_members = Member.objects.filter(
         is_active=True,
-        is_frozen=False
+        is_frozen=False,
+        # membership_expiry__gte=today
     ).count()
-
-    # New members this month
-    new_members = Member.objects.filter(
-        date_joined__date__gte=thirty_days_ago
+    
+    # New members today
+    new_members_today = Member.objects.filter(
+        date_joined__date=today
     ).count()
-    new_members_prev_month = Member.objects.filter(
-        date_joined__date__gte=thirty_days_ago - timedelta(days=30),
-        date_joined__date__lt=thirty_days_ago
-    ).count()
-    new_members_change = new_members - new_members_prev_month
-
-    # Active Check-ins today
+    
+    # Active check-ins today
     active_checkins = CheckInOutRecord.objects.filter(
-        action='check_in',
-        timestamp__date=today
+        timestamp__date=today,
+        action='check_in'
     ).count()
-
-    # Frozen Members
-    frozen_members = Member.objects.filter(is_frozen=True).count()
-
-    # Not Attending (no check-ins in last week)
+    
+    # Expired members
+    expired_members = Member.objects.filter(
+        is_active = False
+    ).count()
+    
+    
+    # Frozen members
+    frozen_members = Member.objects.filter(
+        is_frozen=True
+    ).count()
+    
+    # Not attending (no check-in in last 7 days)
+    last_week = today - timedelta(days=7)
     attending_member_ids = CheckInOutRecord.objects.filter(
-        action='check_in',
-        timestamp__date__gte=one_weeks_ago
+        timestamp__date__gte=last_week,
+        action='check_in'
     ).values_list('member_id', flat=True).distinct()
-
     not_attending = Member.objects.exclude(
         id__in=attending_member_ids
     ).filter(is_active=True).count()
-
-    # Add overdue members to context
+    
     context = {
         'all_members': {
-            'value': all_members,
-            'change': f'+{new_members_last_month} this month'
+            'value': total_members,
+            'change': f"+{new_members_last_month} this month"
         },
         'active_members': {
             'value': active_members,
-            'change': f'+{new_members_last_month} this month'
+            'change': "Active members"
         },
         'new_members': {
-            'value': new_members,
-            'change': f'+{new_members_change} from last month'
+            'value': new_members_today,
+            'change': "Today"
         },
         'active_checkins': {
             'value': active_checkins,
-            'change': 'Today'
+            'change': "Today"
         },
         'expired_members': {
-            'value': expired_count + overdue_members.count(),
-            'change': 'Action needed'
+            'value': expired_members,
+            'change': "Total expired"
         },
         'frozen_members': {
             'value': frozen_members,
-            'change': 'On temporary hold'
+            'change': "Currently frozen"
         },
         'not_attending': {
             'value': not_attending,
-            'change': '1 week inactive'
+            'change': "Last 7 days"
         }
     }
-
     return render(request, 'dashboard.html', context)
+def members_list(request, filter_type):
+    today = timezone.now().date()
+    
+    if filter_type == 'all':
+        members = Member.objects.all()
+        title = "All Members"
+    elif filter_type == 'active':
+        members = Member.objects.filter(is_active=True, is_frozen=False).order_by()
+        title = "Active Members"
+    elif filter_type == 'new':
+        members = Member.objects.filter(date_joined__date=today)
+        title = "New Members"
+        
+    elif filter_type == 'expired':
+        members = Member.objects.filter(is_active = False)
+        title = "Expired Members"
+    elif filter_type == 'frozen':
+        members = Member.objects.filter(is_frozen=True)
+        title = "Frozen Members"
+    elif filter_type == 'inactive':
+        last_week = today - timedelta(days=7)
+        attending_member_ids = CheckInOutRecord.objects.filter(
+            timestamp__date__gte=last_week,
+            action='check_in'
+        ).values_list('member_id', flat=True).distinct()
+        members = Member.objects.exclude(id__in=attending_member_ids).filter(is_active=True)
+        title = "Not Attending Members"
+    
+    context = {
+        'members': members,
+        'title': title
+    }
+    return render(request, 'members_list.html', context)
 
 def newmember(request):
     return render(request, 'newmember.html')
@@ -1857,7 +1853,7 @@ def search_members(request):
         Q(first_name__icontains=query) |
         Q(last_name__icontains=query) |
         Q(phone_number__icontains=query)
-    ).filter(is_active=True)[:10]  # Limit to 10 results
+    ).filter(is_active=True)[:10]  
     
     results = [{
         'id': member.id,

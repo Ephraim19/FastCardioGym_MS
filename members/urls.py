@@ -50,4 +50,10 @@ urlpatterns = [
     path('tasks/add/', views.add_task, name = "add_task" ),
     path('update_task/<int:task_id>/', views.update_task, name='update_task'),
     path('delete_task/<int:task_id>/', views.delete_task, name='delete_task'),
+    
+    path('members/active/', views.members_list, {'filter_type': 'active'}, name='members_active'),
+    path('members/new/', views.members_list, {'filter_type': 'new'}, name='members_new'),
+    path('members/expired/', views.members_list, {'filter_type': 'expired'}, name='members_expired'),
+    path('members/frozen/', views.members_list, {'filter_type': 'frozen'}, name='members_frozen'),
+    path('members/inactive/', views.members_list, {'filter_type': 'inactive'}, name='members_inactive')
 ]

@@ -1,0 +1,110 @@
+{% extends 'sidebar.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_styles %}
+    <style>
+        .members-list {
+            background-color: var(--pink-50);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .members-header {
+            color: var(--pink-600);
+            margin-bottom: 2rem;
+        }
+
+        .members-table {
+            width: 100%;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(236, 72, 153, 0.1);
+        }
+
+        .members-table th {
+            background-color: var(--pink-100);
+            color: var(--pink-600);
+            padding: 1rem;
+            text-align: left;
+        }
+
+        .members-table td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--pink-100);
+        }
+
+        .members-table tr:hover {
+            background-color: var(--pink-50);
+        }
+
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .status-active {
+            background-color: #dcfce7;
+            color: #059669;
+        }
+
+        .status-inactive {
+            background-color: #fee2e2;
+            color: #dc2626;
+        }
+
+        .status-frozen {
+            background-color: #e0f2fe;
+            color: #0284c7;
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="members-list">
+    <h1 class="members-header">{{ title }}</h1>
+    
+    <table class="members-table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Phone</th>
+                <th>Joined</th>
+                <th>Expiry</th>
+                <th>Status</th>
+                <th>Balance</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for member in members %}
+            <tr>
+                <td>{{ member.first_name }} {{ member.last_name }}</td>
+                <td>{{ member.phone_number }}</td>
+                <td>{{ member.date_joined|date:"M d, Y" }}</td>
+                <td>{{ member.membership_expiry|date:"M d, Y"|default:"-" }}</td>
+                <td>
+                    {% if member.is_frozen %}
+                        <span class="status-badge status-frozen">Frozen</span>
+                    {% elif member.is_active %}
+                        <span class="status-badge status-active">Active</span>
+                    {% else %}
+                        <span class="status-badge status-inactive">Inactive</span>
+                    {% endif %}
+                </td>
+                <td>{{ member.balance }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" style="text-align: center; padding: 2rem;">
+                    No members found
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
