@@ -198,7 +198,53 @@ body {
   opacity: 0.7;
   cursor: pointer;
 }
+.card {
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  text-decoration: none;
+  color: inherit;
+  display: block;
+}
 
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Preserve existing card styles inside the link */
+.card-content {
+  padding: 1rem;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.card-title {
+  font-size: 1rem;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
+
+.card-value {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.card-change {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.875rem;
+}
+
+.positive {
+  color: #059669;
+}
+
+.negative {
+  color: #dc2626;
+}
 .add-expense-btn {
   background: white;
   color: var(--primary);
@@ -240,53 +286,7 @@ body {
   background: var(--primary);
   opacity: 0.5;
 }
-.card {
-    cursor: pointer;
-    transition: all 0.2s ease-in-out;
-    text-decoration: none;
-    color: inherit;
-    display: block;
-}
 
-.card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-/* Preserve existing card styles inside the link */
-.card-content {
-    padding: 1rem;
-    background: white;
-    border-radius: 8px;
-    border: 1px solid #e5e7eb;
-}
-
-.card-title {
-    font-size: 1rem;
-    font-weight: 500;
-    margin-bottom: 0.5rem;
-}
-
-.card-value {
-    font-size: 1.5rem;
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-}
-
-.card-change {
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
-    font-size: 0.875rem;
-}
-
-.positive {
-    color: #059669;
-}
-
-.negative {
-    color: #dc2626;
-}
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .dashboard {
