@@ -491,9 +491,7 @@ def checkin(request):
 @csrf_exempt
 @require_http_methods(["POST"])
 def check_in_out(request):
-    """
-    Handle check-in and check-out actions via AJAX with member status validation
-    """
+
     
     try:
         # Get member ID from request
