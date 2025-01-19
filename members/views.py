@@ -485,7 +485,7 @@ def checkin(request):
 
     # Get recent check-in/out records (last 10)
     recent_records = CheckInOutRecord.objects.select_related('member').all()[:20]
-    return render(request,"Checkin.html",{'recent_records': recent_records })
+    return render(request,"checkin.html",{'recent_records': recent_records })
     
 
 @csrf_exempt
