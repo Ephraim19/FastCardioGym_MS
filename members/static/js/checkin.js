@@ -31,7 +31,7 @@ document.addEventListener('DOMContentLoaded', function() {
         statusMessage.style.display = 'block';
         setTimeout(() => {
             statusMessage.style.display = 'none';
-        }, 5000);
+        }, 30000);
     }
 
     function debounce(func, wait) {
